@@ -10,6 +10,8 @@ A powerful, modern notes application built with SwiftUI for iOS/macOS. MyNotes o
 - Organize notes into folders
 - Pin important notes for quick access
 - Search across all your notes
+- Quick note creation with dedicated + button
+- Enhanced debugging and error handling
 
 ### Checklists
 - Create and manage checklists with multiple items
@@ -17,6 +19,8 @@ A powerful, modern notes application built with SwiftUI for iOS/macOS. MyNotes o
 - Reorder checklist items
 - Organize checklists into folders
 - Pin important checklists
+- Quick checklist creation with dedicated + button
+- Enhanced debugging and error handling
 
 ### Organization
 - Create custom folders to organize your notes and checklists
@@ -30,6 +34,8 @@ A powerful, modern notes application built with SwiftUI for iOS/macOS. MyNotes o
 - Home screen widgets (coming soon)
 - Quick actions for fast note creation
 - Note sharing and export
+- Comprehensive debug logging
+- Test data for development
 
 ## Requirements
 
@@ -55,7 +61,7 @@ open MyNotes.xcodeproj
 
 ### Creating a New Note
 1. Tap the "Notes" tab
-2. Tap the "+" button in the top right
+2. Tap the "+" button in the top right (direct access)
 3. Enter your note title and content
 4. Add an image if desired
 5. Choose a folder (optional)
@@ -63,7 +69,7 @@ open MyNotes.xcodeproj
 
 ### Creating a New Checklist
 1. Tap the "Checklists" tab
-2. Tap the "+" button in the top right
+2. Tap the "+" button in the top right (direct access)
 3. Enter your checklist title
 4. Add items to your checklist
 5. Choose a folder (optional)
@@ -84,6 +90,20 @@ open MyNotes.xcodeproj
    - Swipe left on the folder
    - Tap "Delete"
 
+## Development
+
+### Debugging
+- Comprehensive debug logging throughout the app
+- Test data generation for development
+- Environment validation
+- Core Data operation monitoring
+
+### Technical Improvements
+- Separated note/checklist creation from selection mode
+- Enhanced error handling
+- Improved state management
+- Better memory management
+
 ## Contributing
 
 1. Fork the repository
@@ -99,6 +119,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - SwiftUI for providing a modern UI framework
-- Core Data for robust data persistence
-- Apple's Human Interface Guidelines for design inspiration
-- All contributors who have helped improve this project
+- Core Data for persistent storage
+- Combine for reactive programming
+- UIKit for additional UI components

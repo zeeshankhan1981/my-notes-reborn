@@ -70,6 +70,8 @@ The app uses Core Data for persistent storage with the following entities:
 - Automatic saving on context changes
 - Proper error handling for data operations
 - Efficient fetching with sort descriptors and predicates
+- Test data generation for development
+- Environment validation
 
 ## SwiftUI Implementation
 
@@ -78,11 +80,43 @@ The app uses Core Data for persistent storage with the following entities:
 - Follows MVVM pattern with clear separation of concerns
 - Uses environment objects for state management
 - Implements custom gestures and animations
+- Enhanced debug logging
 
 ### State Management
 - Uses `@StateObject` for view model lifetime management
 - Uses `@Published` for reactive state updates
 - Implements proper memory management with weak references
+- Separates creation from selection modes
+
+## UI Improvements
+
+### Navigation
+- Tab-based navigation between Notes, Checklists, and Folders
+- Dedicated + button for quick creation
+- Separated selection mode from creation
+- Enhanced visual feedback
+
+### Components
+- Custom note and checklist cards
+- Swipe-to-delete functionality
+- Pinned items support
+- Search integration
+- Test data display
+
+## Debugging and Development
+
+### Debug Tools
+- Comprehensive debug logging
+- Core Data operation monitoring
+- Environment validation
+- Test data generation
+- Memory usage tracking
+
+### Performance
+- Efficient data fetching
+- Optimized animations
+- Memory management
+- Lazy loading of content
 
 ## Code Organization
 
@@ -99,7 +133,8 @@ MyNotes/
 ### File Naming Conventions
 - Models: PascalCase (e.g., `Note.swift`)
 - ViewModels: PascalCase + Store suffix (e.g., `NoteStore.swift`)
-- Views: PascalCase + View suffix (e.g., `NoteListView.swift`)
+- Views: PascalCase (e.g., `NoteListView.swift`)
+- CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
 ## Performance Considerations
 

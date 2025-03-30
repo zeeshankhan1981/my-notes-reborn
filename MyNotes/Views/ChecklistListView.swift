@@ -279,24 +279,29 @@ struct ChecklistListView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !isEditMode {
-                        Menu {
+                        HStack(spacing: 16) {
+                            // Direct Add button
                             Button(action: {
                                 selectedChecklist = nil
                                 showingAdd = true
                             }) {
-                                Label("Add Checklist", systemImage: "plus")
+                                Image(systemName: "plus")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(AppTheme.Colors.primary)
                             }
+                            .accessibilityLabel("Add Checklist")
                             
+                            // Select button
                             Button(action: {
                                 withAnimation {
                                     isEditMode = true
                                 }
                             }) {
-                                Label("Select Checklists", systemImage: "checkmark.circle")
+                                Image(systemName: "checkmark.circle")
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundColor(AppTheme.Colors.primary)
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .foregroundColor(AppTheme.Colors.primary)
+                            .accessibilityLabel("Select Checklists")
                         }
                     }
                 }
