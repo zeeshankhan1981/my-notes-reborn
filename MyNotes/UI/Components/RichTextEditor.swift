@@ -37,21 +37,71 @@ struct RichTextEditor: UIViewRepresentable {
             textView.textColor = .placeholderText
         }
         
-        // Create and set up toolbar
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        
-        let boldButton = UIBarButtonItem(title: "Bold", style: .plain, target: context.coordinator, action: #selector(Coordinator.makeBold(_:)))
-        let italicButton = UIBarButtonItem(title: "Italic", style: .plain, target: context.coordinator, action: #selector(Coordinator.makeItalic(_:)))
-        let colorButton = UIBarButtonItem(title: "Blue", style: .plain, target: context.coordinator, action: #selector(Coordinator.makeBlue(_:)))
-        
-        let spacer = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: context.coordinator, action: #selector(Coordinator.doneEditing))
-        
-        toolbar.items = [boldButton, italicButton, colorButton, spacer, doneButton]
-        textView.inputAccessoryView = toolbar
+        // Create enhanced toolbar with icons instead of text buttons
+        setupToolbar(textView, context: context)
         
         return textView
+    }
+    
+    private func setupToolbar(_ textView: UITextView, context: Context) {
+        let toolbar = UIToolbar()
+        toolbar.tintColor = UIColor(named: "AccentColor") ?? .systemBlue
+        toolbar.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.95)
+        toolbar.isTranslucent = true
+        toolbar.sizeToFit()
+        
+        // Create formatting buttons with icons
+        let boldButton = createToolbarButton(
+            icon: "bold",
+            selector: #selector(Coordinator.makeBold(_:)),
+            coordinator: context.coordinator
+        )
+        
+        let italicButton = createToolbarButton(
+            icon: "italic",
+            selector: #selector(Coordinator.makeItalic(_:)),
+            coordinator: context.coordinator
+        )
+        
+        let underlineButton = createToolbarButton(
+            icon: "underline",
+            selector: #selector(Coordinator.makeUnderline(_:)),
+            coordinator: context.coordinator
+        )
+        
+        let colorButton = createToolbarButton(
+            icon: "paintbrush",
+            selector: #selector(Coordinator.showColorPicker(_:)),
+            coordinator: context.coordinator
+        )
+        
+        let linkButton = createToolbarButton(
+            icon: "link",
+            selector: #selector(Coordinator.insertLink(_:)),
+            coordinator: context.coordinator
+        )
+        
+        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: context.coordinator, action: #selector(Coordinator.doneEditing))
+        
+        // Add separator between button groups
+        let separator = UIBarButtonItem(image: UIImage(systemName: "circle.fill")?.withRenderingMode(.alwaysTemplate), style: .plain, target: nil, action: nil)
+        separator.tintColor = UIColor.separator
+        separator.width = 8
+        
+        // Arrange toolbar items
+        toolbar.items = [boldButton, italicButton, underlineButton, separator, colorButton, linkButton, flexSpace, doneButton]
+        textView.inputAccessoryView = toolbar
+    }
+    
+    private func createToolbarButton(icon: String, selector: Selector, coordinator: Coordinator) -> UIBarButtonItem {
+        let button = UIBarButtonItem(
+            image: UIImage(systemName: icon)?.withRenderingMode(.alwaysTemplate),
+            style: .plain,
+            target: coordinator,
+            action: selector
+        )
+        return button
     }
     
     func updateUIView(_ textView: UITextView, context: Context) {
@@ -80,7 +130,7 @@ struct RichTextEditor: UIViewRepresentable {
         )
     }
     
-    class Coordinator: NSObject, UITextViewDelegate {
+    class Coordinator: NSObject, UITextViewDelegate, UIColorPickerViewControllerDelegate {
         var parent: RichTextEditor
         var isEditing = false
         weak var textView: UITextView?
@@ -140,6 +190,8 @@ struct RichTextEditor: UIViewRepresentable {
             parent.onTextChange(attrString)
         }
         
+        // MARK: - Text View Delegate Methods
+        
         func textViewDidBeginEditing(_ textView: UITextView) {
             self.textView = textView
             isEditing = true
@@ -167,6 +219,8 @@ struct RichTextEditor: UIViewRepresentable {
             }
         }
         
+        // MARK: - Formatting Actions
+        
         @objc func makeBold(_ sender: Any) {
             guard let textView = UIResponder.currentFirst() as? UITextView,
                   textView.selectedRange.length > 0 else { return }
@@ -178,6 +232,9 @@ struct RichTextEditor: UIViewRepresentable {
             
             textView.attributedText = attrString
             parent.onTextChange(attrString)
+            
+            // Display visual feedback
+            showFormatFeedback(message: "Bold text applied")
         }
         
         @objc func makeItalic(_ sender: Any) {
@@ -191,28 +248,137 @@ struct RichTextEditor: UIViewRepresentable {
             
             textView.attributedText = attrString
             parent.onTextChange(attrString)
+            
+            // Display visual feedback
+            showFormatFeedback(message: "Italic text applied")
         }
         
-        @objc func makeBlue(_ sender: Any) {
+        @objc func makeUnderline(_ sender: Any) {
             guard let textView = UIResponder.currentFirst() as? UITextView,
                   textView.selectedRange.length > 0 else { return }
             
-            let attrs = [NSAttributedString.Key.foregroundColor: UIColor.blue]
-            
             let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            attrString.setAttributes(attrs, range: textView.selectedRange)
+            attrString.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: textView.selectedRange)
             
             textView.attributedText = attrString
             parent.onTextChange(attrString)
+            
+            // Display visual feedback
+            showFormatFeedback(message: "Underline applied")
+        }
+        
+        @objc func showColorPicker(_ sender: Any) {
+            guard let textView = UIResponder.currentFirst() as? UITextView,
+                  textView.selectedRange.length > 0 else { return }
+            
+            // Create and configure color picker
+            let colorPicker = UIColorPickerViewController()
+            colorPicker.delegate = self
+            colorPicker.supportsAlpha = false
+            colorPicker.title = "Choose Text Color"
+            
+            // Present color picker
+            if let viewController = textView.findViewController() {
+                viewController.present(colorPicker, animated: true)
+            }
+        }
+        
+        // UIColorPickerViewControllerDelegate method
+        func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
+            applyTextColor(viewController.selectedColor)
+        }
+        
+        // Apply color from picker
+        func applyTextColor(_ color: UIColor) {
+            guard let textView = UIResponder.currentFirst() as? UITextView,
+                  textView.selectedRange.length > 0 else { return }
+            
+            let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
+            attrString.addAttribute(.foregroundColor, value: color, range: textView.selectedRange)
+            
+            textView.attributedText = attrString
+            parent.onTextChange(attrString)
+            
+            // Display visual feedback
+            showFormatFeedback(message: "Color applied")
+        }
+        
+        @objc func insertLink(_ sender: Any) {
+            guard let textView = UIResponder.currentFirst() as? UITextView,
+                  textView.selectedRange.length > 0 else { return }
+            
+            // In a real implementation, we would show a dialog to input URL
+            // For now, let's use a default URL as an example
+            let url = URL(string: "https://example.com")!
+            
+            let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
+            attrString.addAttribute(.link, value: url, range: textView.selectedRange)
+            
+            textView.attributedText = attrString
+            parent.onTextChange(attrString)
+            
+            // Display visual feedback
+            showFormatFeedback(message: "Link inserted")
         }
         
         @objc func doneEditing() {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
+        
+        // MARK: - Helper Methods
+        
+        private func showFormatFeedback(message: String) {
+            guard let textView = self.textView else { return }
+            
+            // Create a toast-like feedback popup
+            let feedbackLabel = UILabel()
+            feedbackLabel.text = message
+            feedbackLabel.textAlignment = .center
+            feedbackLabel.textColor = .white
+            feedbackLabel.backgroundColor = UIColor(named: "AccentColor") ?? .systemBlue
+            feedbackLabel.alpha = 0
+            feedbackLabel.layer.cornerRadius = 10
+            feedbackLabel.clipsToBounds = true
+            feedbackLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+            
+            // Add to view hierarchy
+            if let rootView = textView.window {
+                rootView.addSubview(feedbackLabel)
+                
+                // Position and size
+                feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    feedbackLabel.centerXAnchor.constraint(equalTo: rootView.centerXAnchor),
+                    feedbackLabel.bottomAnchor.constraint(equalTo: rootView.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+                    feedbackLabel.heightAnchor.constraint(equalToConstant: 36),
+                    feedbackLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
+                    feedbackLabel.leadingAnchor.constraint(greaterThanOrEqualTo: rootView.leadingAnchor, constant: 40),
+                    feedbackLabel.trailingAnchor.constraint(lessThanOrEqualTo: rootView.trailingAnchor, constant: -40)
+                ])
+                
+                // Add padding
+                feedbackLabel.layoutIfNeeded()
+                feedbackLabel.frame = feedbackLabel.frame.insetBy(dx: -16, dy: 0)
+                
+                // Animate in
+                UIView.animate(withDuration: 0.3, animations: {
+                    feedbackLabel.alpha = 0.9
+                }) { _ in
+                    // Animate out after delay
+                    UIView.animate(withDuration: 0.3, delay: 1.5, options: [], animations: {
+                        feedbackLabel.alpha = 0
+                    }) { _ in
+                        feedbackLabel.removeFromSuperview()
+                    }
+                }
+            }
+        }
     }
 }
 
-// Safe extension to get the first responder without using complex extensions
+// Extensions for helping with UI operations
+
+// Safe extension to get the first responder
 extension UIResponder {
     private static weak var _currentFirstResponder: UIResponder?
     
@@ -224,5 +390,18 @@ extension UIResponder {
     
     @objc private func _storeFirstResponder() {
         UIResponder._currentFirstResponder = self
+    }
+}
+
+// Extension to find the view controller from a view
+extension UIView {
+    func findViewController() -> UIViewController? {
+        if let nextResponder = self.next as? UIViewController {
+            return nextResponder
+        } else if let nextResponder = self.next as? UIView {
+            return nextResponder.findViewController()
+        } else {
+            return nil
+        }
     }
 }
