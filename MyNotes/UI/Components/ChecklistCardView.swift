@@ -3,88 +3,144 @@ import SwiftUI
 struct ChecklistCardView: View {
     let checklist: ChecklistNote
     let onTap: () -> Void
+    let onDelete: () -> Void
     
     @State private var isPressed = false
+    @State private var offset: CGFloat = 0
+    @State private var isSwiping = false
+    
+    // Threshold for delete action
+    private let deleteThreshold: CGFloat = -80
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-                // Title and pin
-                HStack {
-                    Text(checklist.title)
-                        .font(AppTheme.Typography.headline)
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                        .lineLimit(1)
+        ZStack {
+            // Delete background
+            HStack {
+                Spacer()
+                
+                VStack {
+                    Image(systemName: "trash")
+                        .font(.title)
+                        .foregroundColor(.white)
                     
-                    Spacer()
-                    
-                    if checklist.isPinned {
-                        Image(systemName: "pin.fill")
-                            .foregroundColor(.yellow)
-                            .font(.caption)
+                    Text("Delete")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                }
+                .frame(width: abs(min(offset, 0)), height: 100)
+                .background(Color.red)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Dimensions.cornerRadius))
+            }
+            
+            // Card content
+            Button(action: onTap) {
+                VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
+                    // Title and pin
+                    HStack {
+                        Text(checklist.title)
+                            .font(AppTheme.Typography.headline)
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                            .lineLimit(1)
+                        
+                        Spacer()
+                        
+                        if checklist.isPinned {
+                            Image(systemName: "pin.fill")
+                                .foregroundColor(.yellow)
+                                .font(.caption)
+                        }
                     }
-                }
-                
-                // Progress bar
-                ProgressView(value: completionPercentage, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
-                    .frame(height: 4)
-                
-                // Completion status
-                HStack {
-                    Text("\(completedCount)/\(checklist.items.count) completed")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.Colors.textSecondary)
                     
-                    Spacer()
+                    // Progress bar
+                    ProgressView(value: completionPercentage, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
+                        .frame(height: 4)
                     
-                    // Date
-                    Text(formattedDate)
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.Colors.textTertiary)
-                }
-                
-                // Preview of checklist items
-                if !checklist.items.isEmpty {
-                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.tinySpacing) {
-                        ForEach(Array(checklist.items.prefix(3)), id: \.id) { item in
-                            HStack(spacing: AppTheme.Dimensions.smallSpacing) {
-                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(item.isDone ? .green : AppTheme.Colors.textTertiary)
-                                    .font(.caption)
-                                
-                                Text(item.text)
+                    // Completion status
+                    HStack {
+                        Text("\(completedCount)/\(checklist.items.count) completed")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        Spacer()
+                        
+                        // Date
+                        Text(formattedDate)
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textTertiary)
+                    }
+                    
+                    // Preview of checklist items
+                    if !checklist.items.isEmpty {
+                        VStack(alignment: .leading, spacing: AppTheme.Dimensions.tinySpacing) {
+                            ForEach(Array(checklist.items.prefix(3)), id: \.id) { item in
+                                HStack(spacing: AppTheme.Dimensions.smallSpacing) {
+                                    Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(item.isDone ? .green : AppTheme.Colors.textTertiary)
+                                        .font(.caption)
+                                    
+                                    Text(item.text)
+                                        .font(AppTheme.Typography.caption)
+                                        .foregroundColor(AppTheme.Colors.textSecondary)
+                                        .strikethrough(item.isDone)
+                                        .lineLimit(1)
+                                }
+                            }
+                            
+                            if checklist.items.count > 3 {
+                                Text("+ \(checklist.items.count - 3) more items")
                                     .font(AppTheme.Typography.caption)
-                                    .foregroundColor(AppTheme.Colors.textSecondary)
-                                    .strikethrough(item.isDone)
-                                    .lineLimit(1)
+                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                                    .italic()
                             }
                         }
-                        
-                        if checklist.items.count > 3 {
-                            Text("+ \(checklist.items.count - 3) more items")
-                                .font(AppTheme.Typography.caption)
-                                .foregroundColor(AppTheme.Colors.textTertiary)
-                                .italic()
+                        .padding(.top, AppTheme.Dimensions.smallSpacing)
+                    }
+                }
+                .padding(AppTheme.Dimensions.spacing)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(AppTheme.Dimensions.cornerRadius)
+                .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
+                        radius: isPressed ? 2 : 5, 
+                        x: 0, 
+                        y: isPressed ? 1 : 2)
+                .scaleEffect(isPressed ? 0.98 : 1.0)
+                .animation(AppTheme.Animation.quick, value: isPressed)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .onLongPressGesture(minimumDuration: 0.2, pressing: { pressing in
+                self.isPressed = pressing
+            }, perform: {})
+            .offset(x: offset)
+            .gesture(
+                DragGesture()
+                    .onChanged { gesture in
+                        if !isSwiping {
+                            isSwiping = true
+                        }
+                        // Only allow left swipe (negative values)
+                        let newOffset = min(0, gesture.translation.width)
+                        withAnimation(.interactiveSpring()) {
+                            offset = newOffset
                         }
                     }
-                    .padding(.top, AppTheme.Dimensions.smallSpacing)
-                }
-            }
-            .padding(AppTheme.Dimensions.spacing)
-            .background(AppTheme.Colors.secondaryBackground)
-            .cornerRadius(AppTheme.Dimensions.cornerRadius)
-            .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
-                    radius: isPressed ? 2 : 5, 
-                    x: 0, 
-                    y: isPressed ? 1 : 2)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
-            .animation(AppTheme.Animation.quick, value: isPressed)
+                    .onEnded { gesture in
+                        withAnimation(.spring()) {
+                            if offset < deleteThreshold {
+                                // Delete the checklist
+                                offset = -UIScreen.main.bounds.width
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    onDelete()
+                                }
+                            } else {
+                                // Reset position
+                                offset = 0
+                            }
+                            isSwiping = false
+                        }
+                    }
+            )
         }
-        .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0.2, pressing: { pressing in
-            self.isPressed = pressing
-        }, perform: {})
     }
     
     private var completedCount: Int {
@@ -120,7 +176,8 @@ struct ChecklistCardView_Previews: PreviewProvider {
                 isPinned: true,
                 date: Date()
             ),
-            onTap: {}
+            onTap: {},
+            onDelete: {}
         )
         .padding()
         .previewLayout(.sizeThatFits)
