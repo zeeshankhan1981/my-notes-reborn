@@ -29,6 +29,17 @@ struct AppTheme {
         
         // Focus mode
         static let focusBackground = Color(white: 0.98)
+        
+        // New interface states for Todoist-inspired design
+        static let pressedState = Color.gray.opacity(0.3)
+        static let disabledState = Color.gray.opacity(0.4)
+        static let textOnPrimary = Color.white
+        
+        // Tag colors - for visualization (Todoist-inspired)
+        static let tagColors: [Color] = [
+            .blue, .green, .orange, .purple, .pink, .red,
+            .yellow, .teal, .indigo, .gray, .brown, .mint
+        ]
     }
     
     // MARK: - Dimensions
@@ -46,9 +57,29 @@ struct AppTheme {
         static let tinySpacing: CGFloat = 4
         static let largeSpacing: CGFloat = 24
         
+        // New spacing constants (Todoist-inspired)
+        static let spacingXXS: CGFloat = 2
+        static let spacingXS: CGFloat = 4
+        static let spacingS: CGFloat = 8
+        static let spacingM: CGFloat = 16
+        static let spacingL: CGFloat = 24
+        static let spacingXL: CGFloat = 32
+        
+        // Card radii (Todoist-inspired)
+        static let radiusXS: CGFloat = 2
+        static let radiusS: CGFloat = 4
+        static let radiusM: CGFloat = 8
+        static let radiusL: CGFloat = 12
+        
         // Touch targets
         static let buttonHeight: CGFloat = 44
         static let minTouchSize: CGFloat = 44
+        
+        // Elevation (Todoist-inspired)
+        static let elevationXS: CGFloat = 1
+        static let elevationS: CGFloat = 2
+        static let elevationM: CGFloat = 4
+        static let elevationL: CGFloat = 8
         
         // Typography measurements
         static let lineHeight: CGFloat = 1.6 // Increased line height like iA Writer
@@ -100,17 +131,35 @@ struct AppTheme {
         static func editorTitle() -> Font {
             return Font.monospaced(Font.system(size: 22, weight: .bold))()
         }
+        
+        // New typography styles (Todoist-inspired)
+        static func button() -> Font {
+            return Font.system(size: 14, weight: .medium)
+        }
+        
+        static func captionSmall() -> Font {
+            return Font.system(size: 10)
+        }
     }
     
-    // MARK: - Animation
-    struct Animation {
-        // Subtle, quick animations
-        static let standard = SwiftUI.Animation.easeOut(duration: 0.2)
-        static let quick = SwiftUI.Animation.easeOut(duration: 0.1)
-        static let slow = SwiftUI.Animation.easeOut(duration: 0.3)
+    // MARK: - Animations (Todoist-inspired)
+    struct Animations {
+        // Standard durations
+        static let durationXS: Double = 0.1
+        static let durationS: Double = 0.2
+        static let durationM: Double = 0.3
+        static let durationL: Double = 0.5
         
-        // Content transitions
-        static let fade = SwiftUI.Animation.easeInOut(duration: 0.15)
+        // Curves
+        static let standardCurve = Animation.easeInOut(duration: durationM)
+        static let accelerateCurve = Animation.easeIn(duration: durationM)
+        static let decelerateCurve = Animation.easeOut(duration: durationM)
+        static let quickCurve = Animation.easeInOut(duration: durationS)
+        
+        // Specific animations
+        static let buttonPress = Animation.easeIn(duration: durationXS)
+        static let listTransition = Animation.easeInOut(duration: durationM)
+        static let checkboxToggle = Animation.spring(response: 0.2, dampingFraction: 0.6)
     }
 }
 
@@ -126,6 +175,20 @@ extension View {
                     radius: 1, 
                     x: 0, 
                     y: 1)
+    }
+    
+    // Enhanced card style (Todoist-inspired)
+    func enhancedCardStyle(elevation: CGFloat = AppTheme.Dimensions.elevationXS) -> some View {
+        self
+            .padding(AppTheme.Dimensions.spacing)
+            .background(AppTheme.Colors.cardSurface)
+            .cornerRadius(AppTheme.Dimensions.radiusM)
+            .shadow(
+                color: AppTheme.Colors.cardShadow.opacity(0.1),
+                radius: elevation * 2,
+                x: 0,
+                y: elevation
+            )
     }
     
     // iA Writer-style content container
@@ -165,6 +228,18 @@ extension View {
                     .frame(height: 1)
                     .foregroundColor(AppTheme.Colors.divider),
                 alignment: .bottom
+            )
+    }
+    
+    // List item transition animation (Todoist-inspired)
+    func listItemTransition(delay: Double = 0) -> some View {
+        self
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .animation(
+                Animation
+                    .easeInOut(duration: AppTheme.Animations.durationM)
+                    .delay(delay),
+                value: UUID()
             )
     }
 }
