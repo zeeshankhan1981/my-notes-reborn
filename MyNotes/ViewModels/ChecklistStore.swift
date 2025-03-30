@@ -108,19 +108,19 @@ class ChecklistStore: ObservableObject {
         saveContext()
     }
 
-    func updateChecklist(note: ChecklistNote) {
+    func updateChecklist(checklist: ChecklistNote) {
         let context = persistence.container.viewContext
         
-        _ = CDChecklistNote.fromDomainModel(note, in: context)
+        _ = CDChecklistNote.fromDomainModel(checklist, in: context)
         
         saveContext()
         loadChecklists()
     }
 
-    func delete(note: ChecklistNote) {
+    func delete(checklist: ChecklistNote) {
         let context = persistence.container.viewContext
         let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", checklist.id as CVarArg)
         
         do {
             if let checklistToDelete = try context.fetch(request).first {
@@ -134,9 +134,9 @@ class ChecklistStore: ObservableObject {
         loadChecklists()
     }
 
-    func togglePin(note: ChecklistNote) {
+    func togglePin(checklist: ChecklistNote) {
         let context = persistence.container.viewContext
-        var updatedChecklist = note
+        var updatedChecklist = checklist
         updatedChecklist.isPinned.toggle()
         
         _ = CDChecklistNote.fromDomainModel(updatedChecklist, in: context)

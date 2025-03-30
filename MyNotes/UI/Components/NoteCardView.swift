@@ -4,6 +4,9 @@ struct NoteCardView: View {
     let note: Note
     let onTap: () -> Void
     let onDelete: () -> Void
+    let onLongPress: () -> Void
+    let isInSelectionMode: Bool
+    let isSelected: Bool
     
     @State private var isPressed = false
     @State private var offset: CGFloat = 0
@@ -30,18 +33,25 @@ struct NoteCardView: View {
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.9))
                 }
-                .frame(width: max(abs(min(offset, 0)), 0), height: 80)
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-                .background(AppTheme.Colors.error.opacity(0.9))
-                .cornerRadius(AppTheme.Dimensions.cornerRadius)
+                .frame(width: 80)
+                .background(Color.red)
             }
             
-            // Card content - cleaner, more typography-focused design
+            // Card content
             VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-                // Title and pin
-                HStack(alignment: .top) {
+                // Title and pin indicator
+                HStack {
+                    if isInSelectionMode {
+                        // Selection indicator
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22))
+                            .foregroundColor(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary)
+                            .padding(.trailing, 6)
+                    }
+                    
                     Text(note.title)
                         .font(AppTheme.Typography.headline)
+                        .fontWeight(.medium)
                         .foregroundColor(AppTheme.Colors.textPrimary)
                         .lineLimit(1)
                     
@@ -49,81 +59,49 @@ struct NoteCardView: View {
                     
                     if note.isPinned {
                         Image(systemName: "pin.fill")
-                            .foregroundColor(AppTheme.Colors.accent.opacity(0.8))
                             .font(.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.7))
                     }
                 }
                 
-                // Subtle divider
-                Rectangle()
-                    .fill(AppTheme.Colors.divider)
-                    .frame(height: 1)
-                    .padding(.vertical, AppTheme.Dimensions.tinySpacing)
-                    .opacity(0.6)
-                
-                // Preview of content - more refined typography
+                // Content preview
                 Text(note.content)
                     .font(AppTheme.Typography.body)
                     .foregroundColor(AppTheme.Colors.textSecondary)
                     .lineLimit(2)
-                    .lineSpacing(2)
+                    .padding(.bottom, 4)
                 
-                Spacer()
-                
-                // Date - more minimal
+                // Date
                 HStack {
                     Spacer()
                     Text(formattedDate)
                         .font(AppTheme.Typography.caption)
                         .foregroundColor(AppTheme.Colors.textTertiary)
-                        .padding(.top, AppTheme.Dimensions.tinySpacing)
-                }
-                
-                // Image thumbnail if present - more refined presentation
-                if let imageData = note.imageData, let uiImage = UIImage(data: imageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 100) // Slightly smaller
-                        .frame(maxWidth: .infinity)
-                        .cornerRadius(AppTheme.Dimensions.smallCornerRadius)
-                        .clipped()
-                        .padding(.top, AppTheme.Dimensions.smallSpacing)
                 }
             }
             .padding(AppTheme.Dimensions.spacing)
-            .background(
-                ZStack(alignment: .trailing) {
-                    AppTheme.Colors.cardSurface
-                    
-                    // Swipe hint indicator - more subtle
-                    if offset == 0 && !isSwiping {
-                        Rectangle()
-                            .fill(AppTheme.Colors.error.opacity(0.2))
-                            .frame(width: swipeIndicatorWidth)
-                    }
-                }
-            )
+            .background(AppTheme.Colors.cardSurface)
             .cornerRadius(AppTheme.Dimensions.cornerRadius)
-            .shadow(color: AppTheme.Colors.cardShadow, 
-                    radius: isPressed ? 1 : AppTheme.Dimensions.cardElevation, 
-                    x: 0, 
-                    y: isPressed ? 0 : AppTheme.Dimensions.cardElevation/2)
-            .scaleEffect(isPressed ? 0.99 : 1.0) // More subtle scale
-            .offset(x: offset)
-            .animation(AppTheme.Animation.quick, value: isPressed)
-            .gesture(
-                TapGesture()
-                    .onEnded { _ in
-                        onTap()
-                    }
-                    .simultaneously(with: 
-                        LongPressGesture(minimumDuration: 0.2)
-                            .onChanged { value in
-                                self.isPressed = value
-                            }
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Dimensions.cornerRadius)
+                    .stroke(
+                        isSelected ? AppTheme.Colors.primary : Color.clear,
+                        lineWidth: isSelected ? 2 : 0
                     )
             )
+            .overlay(
+                // Right edge indicator for swipe hint
+                Rectangle()
+                    .frame(width: swipeIndicatorWidth)
+                    .foregroundColor(offset < 0 ? Color.red.opacity(min(1, -offset / deleteThreshold)) : Color.clear)
+                    .padding(.vertical, 1)
+                ,
+                alignment: .trailing
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .offset(x: offset)
+            .animation(AppTheme.Animation.standard, value: isPressed)
+            .animation(AppTheme.Animation.standard, value: isSelected)
             .gesture(
                 DragGesture()
                     .onChanged { gesture in
@@ -135,25 +113,51 @@ struct NoteCardView: View {
                         }
                     }
                     .onEnded { gesture in
-                        withAnimation(AppTheme.Animation.subtle) {
-                            if offset < deleteThreshold {
-                                // Delete the note with animation
+                        isSwiping = false
+                        if offset < deleteThreshold {
+                            withAnimation(.spring()) {
                                 offset = -UIScreen.main.bounds.width
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    onDelete()
-                                }
-                            } else {
-                                // Reset position
-                                offset = 0
                             }
-                            
-                            // Reset swiping after a delay to allow swipe hint to reappear
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                isSwiping = false
+                            // Trigger delete after animation
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                onDelete()
+                            }
+                        } else {
+                            withAnimation(.spring()) {
+                                offset = 0
                             }
                         }
                     }
             )
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .onEnded { _ in
+                        if !isSwiping && !isInSelectionMode {
+                            // Haptic feedback
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.impactOccurred()
+                            
+                            onLongPress()
+                        }
+                    }
+            )
+            .simultaneousGesture(
+                TapGesture()
+                    .onEnded {
+                        if !isSwiping {
+                            if isInSelectionMode {
+                                // In selection mode, tap toggles selection
+                                onLongPress()
+                            } else {
+                                // Normal mode, open the note
+                                onTap()
+                            }
+                        }
+                    }
+            )
+            .onTapGesture {
+                // This is handled by the TapGesture above
+            }
         }
         .contentShape(Rectangle()) // Make entire card tappable
     }
@@ -168,21 +172,39 @@ struct NoteCardView: View {
 #if DEBUG
 struct NoteCardView_Previews: PreviewProvider {
     static var previews: some View {
-        NoteCardView(
-            note: Note(
-                id: UUID(),
-                title: "Meeting Notes",
-                content: "Discussed project timeline and resource allocation for Q3.",
-                folderID: nil,
-                isPinned: true,
-                date: Date(),
-                imageData: nil
-            ),
-            onTap: {},
-            onDelete: {}
-        )
+        VStack(spacing: 16) {
+            // Normal mode
+            NoteCardView(
+                note: Note(id: UUID(), title: "Meeting Notes", content: "Discuss project timeline and milestones", folderID: nil, isPinned: true, date: Date(), imageData: nil),
+                onTap: {},
+                onDelete: {},
+                onLongPress: {},
+                isInSelectionMode: false,
+                isSelected: false
+            )
+            
+            // Selection mode, not selected
+            NoteCardView(
+                note: Note(id: UUID(), title: "Shopping List", content: "Milk, eggs, bread", folderID: nil, isPinned: false, date: Date(), imageData: nil),
+                onTap: {},
+                onDelete: {},
+                onLongPress: {},
+                isInSelectionMode: true,
+                isSelected: false
+            )
+            
+            // Selection mode, selected
+            NoteCardView(
+                note: Note(id: UUID(), title: "Ideas", content: "New app concept with AR integration", folderID: nil, isPinned: false, date: Date(), imageData: nil),
+                onTap: {},
+                onDelete: {},
+                onLongPress: {},
+                isInSelectionMode: true,
+                isSelected: true
+            )
+        }
         .padding()
-        .previewLayout(.sizeThatFits)
+        .background(Color.gray.opacity(0.1))
     }
 }
 #endif

@@ -23,6 +23,7 @@ struct NoteEditorView: View {
     @State private var tags = ""
     @State private var isShowingFormatting = false
     
+    // Original initializer for backward compatibility
     init(mode: NoteEditorMode, existingNote: Note?) {
         self.mode = mode
         self.existingNote = existingNote
@@ -50,6 +51,42 @@ struct NoteEditorView: View {
             
             // Tags would be initialized here if tags were implemented
         } else {
+            // Initialize with empty attributed string
+            _attributedContent = State(initialValue: NSAttributedString(
+                string: "",
+                attributes: [.font: UIFont.preferredFont(forTextStyle: .body)]
+            ))
+        }
+    }
+    
+    // New simplified initializer
+    init(note: Note?) {
+        if let note = note {
+            self.mode = .edit
+            self.existingNote = note
+            _title = State(initialValue: note.title)
+            _content = State(initialValue: note.content)
+            _imageData = State(initialValue: note.imageData)
+            _selectedFolderID = State(initialValue: note.folderID)
+            
+            // Initialize attributedContent from data if available
+            if let attributedContentData = note.attributedContent,
+               let decodedAttributedString = try? NSAttributedString(
+                   data: attributedContentData,
+                   options: [.documentType: NSAttributedString.DocumentType.rtfd],
+                   documentAttributes: nil) {
+                _attributedContent = State(initialValue: decodedAttributedString)
+            } else {
+                // Fallback to regular content with default attributes
+                _attributedContent = State(initialValue: NSAttributedString(
+                    string: note.content,
+                    attributes: [.font: UIFont.preferredFont(forTextStyle: .body)]
+                ))
+            }
+        } else {
+            self.mode = .new
+            self.existingNote = nil
+            
             // Initialize with empty attributed string
             _attributedContent = State(initialValue: NSAttributedString(
                 string: "",

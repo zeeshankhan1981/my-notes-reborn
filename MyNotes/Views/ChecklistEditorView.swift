@@ -19,6 +19,7 @@ struct ChecklistEditorView: View {
     @State private var selectedFolderID: UUID?
     @State private var tags = ""
     
+    // Original initializer for backward compatibility
     init(mode: ChecklistEditorMode, existingChecklist: ChecklistNote?) {
         self.mode = mode
         self.existingChecklist = existingChecklist
@@ -28,6 +29,20 @@ struct ChecklistEditorView: View {
             _items = State(initialValue: checklist.items)
             _selectedFolderID = State(initialValue: checklist.folderID)
             // Tags would be initialized here if implemented
+        }
+    }
+    
+    // New simplified initializer
+    init(checklist: ChecklistNote?) {
+        if let checklist = checklist {
+            self.mode = .edit
+            self.existingChecklist = checklist
+            _title = State(initialValue: checklist.title)
+            _items = State(initialValue: checklist.items)
+            _selectedFolderID = State(initialValue: checklist.folderID)
+        } else {
+            self.mode = .new
+            self.existingChecklist = nil
         }
     }
 
@@ -128,7 +143,7 @@ struct ChecklistEditorView: View {
                 updatedChecklist.folderID = selectedFolderID
                 updatedChecklist.date = Date()
                 
-                checklistStore.updateChecklist(note: updatedChecklist)
+                checklistStore.updateChecklist(checklist: updatedChecklist)
             }
         }
     }
