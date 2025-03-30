@@ -9,19 +9,24 @@ MyNotes follows a clean architecture pattern with the following main components:
 - `ChecklistNote`: Represents a checklist with items and folder association
 - `ChecklistItem`: Individual items within a checklist
 - `Folder`: Container for organizing notes and checklists
+- `Tag`: Categorization system for notes and checklists
 
 ### 2. ViewModels
 - `NoteStore`: Manages note-related operations
 - `ChecklistStore`: Manages checklist-related operations
 - `FolderStore`: Manages folder-related operations
+- `TagStore`: Manages tags and their relationships
 
 ### 3. Views
 - `MainView`: Tab-based navigation between Notes, Checklists, and Folders
-- `NoteListView`: Displays list of notes with swipe actions
+- `NoteListView`: Displays list of notes with swipe actions and filtering
 - `NoteEditorView`: Edit/create notes with rich text capabilities
-- `ChecklistListView`: Displays list of checklists
+- `ChecklistListView`: Displays list of checklists with filtering
 - `ChecklistEditorView`: Edit/create checklists with item management
 - `FolderManagerView`: Manage folders and organization
+- `TagManagementView`: Tag creation and management
+- `TagSelectorView`: Tag selection interface
+- `TagFilterView`: Tag-based filtering interface
 
 ## Core Data Implementation
 
@@ -38,6 +43,7 @@ The app uses Core Data for persistent storage with the following entities:
   - date (Date)
 - Relationships:
   - folder (to-one relationship with CDFolder)
+  - tags (to-many relationship with CDTags)
 
 #### CDChecklistNote
 - Properties:
@@ -48,6 +54,7 @@ The app uses Core Data for persistent storage with the following entities:
 - Relationships:
   - folder (to-one relationship with CDFolder)
   - items (to-many relationship with CDChecklistItem)
+  - tags (to-many relationship with CDTags)
 
 #### CDChecklistItem
 - Properties:
@@ -61,6 +68,15 @@ The app uses Core Data for persistent storage with the following entities:
 - Properties:
   - id (UUID)
   - name (String)
+- Relationships:
+  - notes (to-many relationship with CDNote)
+  - checklists (to-many relationship with CDChecklistNote)
+
+#### CDTags
+- Properties:
+  - id (UUID)
+  - name (String)
+  - color (String)
 - Relationships:
   - notes (to-many relationship with CDNote)
   - checklists (to-many relationship with CDChecklistNote)
@@ -102,6 +118,9 @@ The app uses Core Data for persistent storage with the following entities:
 - Pinned items support
 - Search integration
 - Test data display
+- Rich text editor with formatting options
+- Tag filtering interface
+- Tag selection in editors
 
 ## Debugging and Development
 
@@ -245,3 +264,18 @@ MyNotes/
 - Proper testing
 - Documentation updates
 - Code review required
+
+## Version History
+
+### v0.1.1 (2025-03-30)
+- Added tag filtering system
+- Enhanced rich text editor
+- Fixed RichTextEditor compile-time errors
+- Added tag management UI components
+- Updated list views with filtering capabilities
+
+### v0.1.0 (2025-03-29)
+- Initial release with basic note-taking functionality
+- Core Data integration
+- Basic UI components
+- Folder management system
