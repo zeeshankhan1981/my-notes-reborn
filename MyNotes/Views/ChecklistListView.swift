@@ -41,23 +41,51 @@ struct ChecklistListView: View {
                 VStack(spacing: 0) {
                     // Bulk delete toolbar
                     if isEditMode {
-                        HStack {
-                            Text("\(selectedChecklists.count) selected")
-                                .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                            
-                            Spacer()
+                        VStack(spacing: 0) {
+                            HStack {
+                                Button("Cancel") {
+                                    withAnimation {
+                                        isEditMode = false
+                                        selectedChecklists.removeAll()
+                                    }
+                                }
+                                .foregroundColor(AppTheme.Colors.primary)
+                                
+                                Spacer()
+                                
+                                Text("\(selectedChecklists.count) selected")
+                                    .font(AppTheme.Typography.body)
+                                    .foregroundColor(AppTheme.Colors.textPrimary)
+                                
+                                Spacer()
+                                
+                                Button("Select All") {
+                                    withAnimation {
+                                        selectedChecklists = Set(filteredChecklists.map { $0.id })
+                                    }
+                                }
+                                .foregroundColor(AppTheme.Colors.primary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 10)
                             
                             if !selectedChecklists.isEmpty {
                                 Button(action: {
                                     isShowingDeleteConfirmation = true
                                 }) {
-                                    Label("Delete Selected", systemImage: "trash")
-                                        .foregroundColor(.red)
+                                    HStack {
+                                        Image(systemName: "trash")
+                                        Text("Delete Selected")
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.red)
+                                    .cornerRadius(10)
+                                    .padding(.horizontal)
                                 }
                             }
                         }
-                        .padding()
                         .background(AppTheme.Colors.secondaryBackground)
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
@@ -246,14 +274,6 @@ struct ChecklistListView: View {
                             Image(systemName: isShowingSearch ? "xmark" : "magnifyingglass")
                                 .foregroundColor(AppTheme.Colors.primary)
                         }
-                    } else {
-                        Button("Cancel") {
-                            withAnimation {
-                                isEditMode = false
-                                selectedChecklists.removeAll()
-                            }
-                        }
-                        .foregroundColor(AppTheme.Colors.primary)
                     }
                 }
                 
@@ -276,15 +296,6 @@ struct ChecklistListView: View {
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
-                                .foregroundColor(AppTheme.Colors.primary)
-                        }
-                    } else {
-                        Button(action: {
-                            withAnimation {
-                                selectedChecklists = Set(filteredChecklists.map { $0.id })
-                            }
-                        }) {
-                            Text("Select All")
                                 .foregroundColor(AppTheme.Colors.primary)
                         }
                     }
@@ -334,20 +345,33 @@ struct ChecklistListView: View {
     
     @ViewBuilder
     private func selectionOverlay(for checklist: ChecklistNote) -> some View {
-        ZStack(alignment: .topLeading) {
-            Color.black.opacity(0.0001) // Invisible overlay to capture taps
+        ZStack {
+            Rectangle()
+                .fill(Color.black.opacity(0.0001)) // Invisible touch layer
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            Circle()
-                .fill(selectedChecklists.contains(checklist.id) ? AppTheme.Colors.primary : Color.gray.opacity(0.3))
-                .frame(width: 26, height: 26)
-                .overlay(
-                    Image(systemName: "checkmark")
-                        .foregroundColor(.white)
-                        .font(.caption)
-                        .opacity(selectedChecklists.contains(checklist.id) ? 1 : 0)
-                )
-                .padding(8)
+            VStack {
+                HStack {
+                    Circle()
+                        .strokeBorder(selectedChecklists.contains(checklist.id) ? AppTheme.Colors.primary : Color.gray, lineWidth: 2)
+                        .background(
+                            Circle()
+                                .fill(selectedChecklists.contains(checklist.id) ? AppTheme.Colors.primary : Color.clear)
+                        )
+                        .frame(width: 22, height: 22)
+                        .overlay(
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.white)
+                                .font(.system(size: 12, weight: .bold))
+                                .opacity(selectedChecklists.contains(checklist.id) ? 1 : 0)
+                        )
+                        .padding(10)
+                    
+                    Spacer()
+                }
+                
+                Spacer()
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

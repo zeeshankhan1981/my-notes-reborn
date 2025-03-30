@@ -11,6 +11,8 @@ struct ChecklistCardView: View {
     
     // Threshold for delete action
     private let deleteThreshold: CGFloat = -80
+    // Visual indicator width for swipe hint
+    private let swipeIndicatorWidth: CGFloat = 5
     
     var body: some View {
         ZStack {
@@ -18,106 +20,124 @@ struct ChecklistCardView: View {
             HStack {
                 Spacer()
                 
+                // Delete indicator
                 VStack {
                     Image(systemName: "trash")
-                        .font(.title)
+                        .font(.title2)
                         .foregroundColor(.white)
                     
                     Text("Delete")
-                        .font(.caption)
+                        .font(.footnote)
+                        .fontWeight(.semibold)
                         .foregroundColor(.white)
                 }
-                .frame(width: abs(min(offset, 0)), height: 100)
+                .frame(width: max(abs(min(offset, 0)), 0), height: 100)
+                .padding(.horizontal, 20)
                 .background(Color.red)
-                .clipShape(RoundedRectangle(cornerRadius: AppTheme.Dimensions.cornerRadius))
+                .cornerRadius(AppTheme.Dimensions.cornerRadius)
             }
             
             // Card content
-            Button(action: onTap) {
-                VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-                    // Title and pin
-                    HStack {
-                        Text(checklist.title)
-                            .font(AppTheme.Typography.headline)
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                        
-                        if checklist.isPinned {
-                            Image(systemName: "pin.fill")
-                                .foregroundColor(.yellow)
-                                .font(.caption)
-                        }
-                    }
+            VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
+                // Title and pin
+                HStack {
+                    Text(checklist.title)
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                        .lineLimit(1)
                     
-                    // Progress bar
-                    ProgressView(value: completionPercentage, total: 1.0)
-                        .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
-                        .frame(height: 4)
+                    Spacer()
                     
-                    // Completion status
-                    HStack {
-                        Text("\(completedCount)/\(checklist.items.count) completed")
-                            .font(AppTheme.Typography.caption)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                        
-                        Spacer()
-                        
-                        // Date
-                        Text(formattedDate)
-                            .font(AppTheme.Typography.caption)
-                            .foregroundColor(AppTheme.Colors.textTertiary)
-                    }
-                    
-                    // Preview of checklist items
-                    if !checklist.items.isEmpty {
-                        VStack(alignment: .leading, spacing: AppTheme.Dimensions.tinySpacing) {
-                            ForEach(Array(checklist.items.prefix(3)), id: \.id) { item in
-                                HStack(spacing: AppTheme.Dimensions.smallSpacing) {
-                                    Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(item.isDone ? .green : AppTheme.Colors.textTertiary)
-                                        .font(.caption)
-                                    
-                                    Text(item.text)
-                                        .font(AppTheme.Typography.caption)
-                                        .foregroundColor(AppTheme.Colors.textSecondary)
-                                        .strikethrough(item.isDone)
-                                        .lineLimit(1)
-                                }
-                            }
-                            
-                            if checklist.items.count > 3 {
-                                Text("+ \(checklist.items.count - 3) more items")
-                                    .font(AppTheme.Typography.caption)
-                                    .foregroundColor(AppTheme.Colors.textTertiary)
-                                    .italic()
-                            }
-                        }
-                        .padding(.top, AppTheme.Dimensions.smallSpacing)
+                    if checklist.isPinned {
+                        Image(systemName: "pin.fill")
+                            .foregroundColor(.yellow)
+                            .font(.caption)
                     }
                 }
-                .padding(AppTheme.Dimensions.spacing)
-                .background(AppTheme.Colors.secondaryBackground)
-                .cornerRadius(AppTheme.Dimensions.cornerRadius)
-                .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
-                        radius: isPressed ? 2 : 5, 
-                        x: 0, 
-                        y: isPressed ? 1 : 2)
-                .scaleEffect(isPressed ? 0.98 : 1.0)
-                .animation(AppTheme.Animation.quick, value: isPressed)
+                
+                // Progress bar
+                ProgressView(value: completionPercentage, total: 1.0)
+                    .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
+                    .frame(height: 4)
+                
+                // Completion status
+                HStack {
+                    Text("\(completedCount)/\(checklist.items.count) completed")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    Spacer()
+                    
+                    // Date
+                    Text(formattedDate)
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                }
+                
+                // Preview of checklist items
+                if !checklist.items.isEmpty {
+                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.tinySpacing) {
+                        ForEach(Array(checklist.items.prefix(3)), id: \.id) { item in
+                            HStack(spacing: AppTheme.Dimensions.smallSpacing) {
+                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(item.isDone ? .green : AppTheme.Colors.textTertiary)
+                                    .font(.caption)
+                                
+                                Text(item.text)
+                                    .font(AppTheme.Typography.caption)
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                                    .strikethrough(item.isDone)
+                                    .lineLimit(1)
+                            }
+                        }
+                        
+                        if checklist.items.count > 3 {
+                            Text("+ \(checklist.items.count - 3) more items")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundColor(AppTheme.Colors.textTertiary)
+                                .italic()
+                        }
+                    }
+                    .padding(.top, AppTheme.Dimensions.smallSpacing)
+                }
             }
-            .buttonStyle(PlainButtonStyle())
-            .onLongPressGesture(minimumDuration: 0.2, pressing: { pressing in
-                self.isPressed = pressing
-            }, perform: {})
+            .padding(AppTheme.Dimensions.spacing)
+            .background(
+                ZStack(alignment: .trailing) {
+                    AppTheme.Colors.secondaryBackground
+                    
+                    // Swipe hint indicator - subtle visual cue that the card is swipeable
+                    if offset == 0 && !isSwiping {
+                        Rectangle()
+                            .fill(Color.red.opacity(0.3))
+                            .frame(width: swipeIndicatorWidth)
+                    }
+                }
+            )
+            .cornerRadius(AppTheme.Dimensions.cornerRadius)
+            .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
+                    radius: isPressed ? 2 : 5, 
+                    x: 0, 
+                    y: isPressed ? 1 : 2)
+            .scaleEffect(isPressed ? 0.98 : 1.0)
             .offset(x: offset)
+            .animation(AppTheme.Animation.quick, value: isPressed)
+            .gesture(
+                TapGesture()
+                    .onEnded { _ in
+                        onTap()
+                    }
+                    .simultaneously(with: 
+                        LongPressGesture(minimumDuration: 0.2)
+                            .onChanged { value in
+                                self.isPressed = value
+                            }
+                    )
+            )
             .gesture(
                 DragGesture()
                     .onChanged { gesture in
-                        if !isSwiping {
-                            isSwiping = true
-                        }
+                        isSwiping = true
                         // Only allow left swipe (negative values)
                         let newOffset = min(0, gesture.translation.width)
                         withAnimation(.interactiveSpring()) {
@@ -127,7 +147,7 @@ struct ChecklistCardView: View {
                     .onEnded { gesture in
                         withAnimation(.spring()) {
                             if offset < deleteThreshold {
-                                // Delete the checklist
+                                // Delete the checklist with animation
                                 offset = -UIScreen.main.bounds.width
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                                     onDelete()
@@ -136,11 +156,16 @@ struct ChecklistCardView: View {
                                 // Reset position
                                 offset = 0
                             }
-                            isSwiping = false
+                            
+                            // Reset swiping after a delay to allow swipe hint to reappear
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isSwiping = false
+                            }
                         }
                     }
             )
         }
+        .contentShape(Rectangle()) // Make entire card tappable
     }
     
     private var completedCount: Int {
