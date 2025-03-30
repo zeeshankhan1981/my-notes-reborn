@@ -51,12 +51,23 @@ struct RichTextEditor: UIViewRepresentable {
     }
     
     func updateUIView(_ textView: UITextView, context: Context) {
-        // Only update if the view's text does not match the binding
-        if text.string != textView.attributedText.string || !text.isEqual(to: textView.attributedText) {
-            // Avoid setting text if it's the placeholder
-            if !(text.string.isEmpty && textView.attributedText.string == placeholder) {
-                textView.attributedText = text
-            }
+        // To avoid the "Publishing changes from within view updates" warning,
+        // we need to be careful about modifying state during view updates
+        
+        // Check if the current view's text is the placeholder
+        let isShowingPlaceholder = textView.attributedText.string == placeholder 
+            && textView.textColor == UIColor.placeholderText
+        
+        // Only update the text view if our binding changed AND
+        // we're not showing the placeholder now
+        if !isShowingPlaceholder && text.string != textView.attributedText.string {
+            // Use a temporary variable to avoid directly modifying state
+            let currentText = text
+            
+            // Update text view without triggering onTextChange
+            context.coordinator.updatingFromParent = true
+            textView.attributedText = currentText
+            context.coordinator.updatingFromParent = false
         }
     }
     
@@ -234,8 +245,10 @@ struct RichTextEditor: UIViewRepresentable {
         // Update the text view
         textView.attributedText = mutableAttributedText
         
-        // Notify about the change
-        onTextChange(mutableAttributedText)
+        // Use DispatchQueue.main.async to avoid updating state during view updates
+        DispatchQueue.main.async {
+            onTextChange(mutableAttributedText)
+        }
     }
     
     func makeCoordinator() -> Coordinator {
@@ -244,6 +257,7 @@ struct RichTextEditor: UIViewRepresentable {
     
     class Coordinator: NSObject, UITextViewDelegate {
         var parent: RichTextEditor
+        var updatingFromParent = false
         
         init(_ parent: RichTextEditor) {
             self.parent = parent
@@ -257,8 +271,13 @@ struct RichTextEditor: UIViewRepresentable {
         }
         
         func textViewDidChange(_ textView: UITextView) {
-            // Update the binding
-            parent.onTextChange(textView.attributedText)
+            // Don't call onTextChange if we're updating from the parent
+            if !updatingFromParent {
+                // Use DispatchQueue.main.async to avoid updating state during view updates
+                DispatchQueue.main.async {
+                    self.parent.onTextChange(textView.attributedText)
+                }
+            }
         }
         
         func textViewDidEndEditing(_ textView: UITextView) {

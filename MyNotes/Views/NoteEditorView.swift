@@ -255,7 +255,7 @@ struct NoteEditorView: View {
                     .foregroundColor(AppTheme.Colors.primary)
                 }
             }
-            .onChange(of: selectedItem) { newItem in
+            .onChange(of: selectedItem) { oldItem, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self) {
                         withAnimation {
