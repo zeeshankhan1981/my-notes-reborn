@@ -4,6 +4,9 @@ import CoreData
 // MARK: - Note Extensions
 extension CDNote {
     func toDomainModel() -> Note {
+        // Extract tag IDs from relationships
+        let tagIDs = (tags?.allObjects as? [CDTag])?.compactMap { $0.id } ?? []
+        
         return Note(
             id: id ?? UUID(),
             title: title ?? "",
@@ -12,7 +15,8 @@ extension CDNote {
             isPinned: isPinned,
             date: date ?? Date(),
             imageData: imageData,
-            attributedContent: attributedContent
+            attributedContent: attributedContent,
+            tagIDs: tagIDs
         )
     }
     
@@ -48,6 +52,23 @@ extension CDNote {
             }
         } else {
             cdNote.folder = nil
+        }
+        
+        // Handle tag relationships
+        // First, remove any existing tag relationships
+        if let existingTags = cdNote.tags {
+            cdNote.removeFromTags(existingTags)
+        }
+        
+        // Then add the current tags
+        if !note.tagIDs.isEmpty {
+            let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+            tagRequest.predicate = NSPredicate(format: "id IN %@", note.tagIDs as [CVarArg])
+            if let tags = try? context.fetch(tagRequest) {
+                for tag in tags {
+                    cdNote.addToTags(tag)
+                }
+            }
         }
         
         return cdNote
@@ -90,24 +111,38 @@ extension CDChecklistNote {
         let domainItems = (items?.allObjects as? [CDChecklistItem] ?? [])
             .map { $0.toDomainModel() }
         
+        // Extract tag IDs from relationships
+        let tagIDs = (tags?.allObjects as? [CDTag])?.compactMap { $0.id } ?? []
+        
         return ChecklistNote(
             id: id ?? UUID(),
             title: title ?? "",
             folderID: folder?.id,
             items: domainItems,
             isPinned: isPinned,
-            date: date ?? Date()
+            date: date ?? Date(),
+            tagIDs: tagIDs
         )
     }
     
     static func fromDomainModel(_ checklist: ChecklistNote, in context: NSManagedObjectContext) -> CDChecklistNote {
         let cdChecklist: CDChecklistNote
         
+        // Check if checklist already exists
         let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", checklist.id as CVarArg)
+        request.fetchLimit = 1
         
         if let existingChecklist = try? context.fetch(request).first {
             cdChecklist = existingChecklist
+            
+            // Remove existing items to avoid duplicates
+            if let existingItems = cdChecklist.items {
+                for case let item as CDChecklistItem in existingItems {
+                    cdChecklist.removeFromItems(item)
+                    context.delete(item)
+                }
+            }
         } else {
             cdChecklist = CDChecklistNote(context: context)
             cdChecklist.id = checklist.id
@@ -115,10 +150,10 @@ extension CDChecklistNote {
         
         // Update properties
         cdChecklist.title = checklist.title
-        cdChecklist.isPinned = checklist.isPinned
         cdChecklist.date = checklist.date
+        cdChecklist.isPinned = checklist.isPinned
         
-        // Handle folder relationship
+        // Handle folder relationship if needed
         if let folderID = checklist.folderID {
             let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
             folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
@@ -129,20 +164,28 @@ extension CDChecklistNote {
             cdChecklist.folder = nil
         }
         
-        // Handle items - first remove existing items
-        let existingItems = cdChecklist.items?.allObjects as? [CDChecklistItem] ?? []
-        for item in existingItems {
-            context.delete(item)
-        }
-        
-        // Now add new items
-        let cdItems = NSMutableSet()
+        // Add items
         for item in checklist.items {
             let cdItem = CDChecklistItem.fromDomainModel(item, in: context)
-            cdItem.checklist = cdChecklist
-            cdItems.add(cdItem)
+            cdChecklist.addToItems(cdItem)
         }
-        cdChecklist.items = cdItems
+        
+        // Handle tag relationships
+        // First, remove any existing tag relationships
+        if let existingTags = cdChecklist.tags {
+            cdChecklist.removeFromTags(existingTags)
+        }
+        
+        // Then add the current tags
+        if !checklist.tagIDs.isEmpty {
+            let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+            tagRequest.predicate = NSPredicate(format: "id IN %@", checklist.tagIDs as [CVarArg])
+            if let tags = try? context.fetch(tagRequest) {
+                for tag in tags {
+                    cdChecklist.addToTags(tag)
+                }
+            }
+        }
         
         return cdChecklist
     }
@@ -173,5 +216,35 @@ extension CDFolder {
         cdFolder.name = folder.name
         
         return cdFolder
+    }
+}
+
+// MARK: - Tag Extensions
+extension CDTag {
+    func toDomainModel() -> Tag {
+        return Tag(
+            id: id ?? UUID(),
+            name: name ?? "",
+            color: Tag.colorFromString(color)
+        )
+    }
+    
+    static func fromDomainModel(_ tag: Tag, in context: NSManagedObjectContext) -> CDTag {
+        let cdTag: CDTag
+        
+        let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", tag.id as CVarArg)
+        
+        if let existingTag = try? context.fetch(request).first {
+            cdTag = existingTag
+        } else {
+            cdTag = CDTag(context: context)
+            cdTag.id = tag.id
+        }
+        
+        cdTag.name = tag.name
+        cdTag.color = tag.colorString()
+        
+        return cdTag
     }
 }

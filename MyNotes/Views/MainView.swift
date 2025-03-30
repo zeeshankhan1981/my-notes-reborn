@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct MainView: View {
+    @StateObject private var noteStore = NoteStore()
+    @StateObject private var checklistStore = ChecklistStore()
+    @StateObject private var folderStore = FolderStore()
+    @StateObject private var tagStore = TagStore()
+    
     init() {
         print("MainView initialized")
     }
@@ -19,6 +24,10 @@ struct MainView: View {
                 .tabItem { Label("Folders", systemImage: "folder") }
                 .onAppear { print("FolderManagerView appeared") }
         }
+        .environmentObject(noteStore)
+        .environmentObject(checklistStore)
+        .environmentObject(folderStore)
+        .environmentObject(tagStore)
         .onAppear {
             print("TabView appeared")
             

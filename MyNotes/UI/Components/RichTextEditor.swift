@@ -18,6 +18,12 @@ struct RichTextEditor: UIViewRepresentable {
         case alignLeft
         case alignCenter
         case alignRight
+        // New formatting options
+        case bulletList
+        case numberedList
+        case increaseIndent
+        case decreaseIndent
+        case insertLink(URL, String)
     }
     
     func makeUIView(context: Context) -> UITextView {
@@ -30,6 +36,8 @@ struct RichTextEditor: UIViewRepresentable {
         textView.isEditable = true
         textView.isUserInteractionEnabled = true
         textView.backgroundColor = .clear
+        textView.allowsEditingTextAttributes = true
+        textView.dataDetectorTypes = .link
         
         // Set placeholder if needed
         if text.string.isEmpty {
@@ -76,39 +84,34 @@ struct RichTextEditor: UIViewRepresentable {
         toolbar.sizeToFit()
         
         // Create formatting buttons
-        let boldButton = UIBarButtonItem(image: UIImage(systemName: "bold"), style: .plain, target: nil, action: nil)
-        boldButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.bold, to: textView)
+        let boldButton = createFormattingButton(systemName: "bold", formatting: .bold, textView: textView)
+        let italicButton = createFormattingButton(systemName: "italic", formatting: .italic, textView: textView) 
+        let underlineButton = createFormattingButton(systemName: "underline", formatting: .underline, textView: textView)
+        let strikethroughButton = createFormattingButton(systemName: "strikethrough", formatting: .strikethrough, textView: textView)
+        
+        // Text alignment buttons
+        let alignLeftButton = createFormattingButton(systemName: "text.alignleft", formatting: .alignLeft, textView: textView)
+        let alignCenterButton = createFormattingButton(systemName: "text.aligncenter", formatting: .alignCenter, textView: textView)
+        let alignRightButton = createFormattingButton(systemName: "text.alignright", formatting: .alignRight, textView: textView)
+        
+        // Add new list formatting buttons
+        let bulletListButton = createFormattingButton(systemName: "list.bullet", formatting: .bulletList, textView: textView)
+        let numberedListButton = createFormattingButton(systemName: "list.number", formatting: .numberedList, textView: textView)
+        
+        // Add indentation buttons
+        let indentButton = createFormattingButton(systemName: "increase.indent", formatting: .increaseIndent, textView: textView)
+        let outdentButton = createFormattingButton(systemName: "decrease.indent", formatting: .decreaseIndent, textView: textView)
+        
+        // Link button
+        let linkButton = UIBarButtonItem(image: UIImage(systemName: "link"), style: .plain, target: nil, action: nil)
+        linkButton.primaryAction = UIAction { _ in
+            self.showLinkDialog(for: textView)
         }
         
-        let italicButton = UIBarButtonItem(image: UIImage(systemName: "italic"), style: .plain, target: nil, action: nil)
-        italicButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.italic, to: textView)
-        }
-        
-        let underlineButton = UIBarButtonItem(image: UIImage(systemName: "underline"), style: .plain, target: nil, action: nil)
-        underlineButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.underline, to: textView)
-        }
-        
-        let strikethroughButton = UIBarButtonItem(image: UIImage(systemName: "strikethrough"), style: .plain, target: nil, action: nil)
-        strikethroughButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.strikethrough, to: textView)
-        }
-        
-        let alignLeftButton = UIBarButtonItem(image: UIImage(systemName: "text.alignleft"), style: .plain, target: nil, action: nil)
-        alignLeftButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.alignLeft, to: textView)
-        }
-        
-        let alignCenterButton = UIBarButtonItem(image: UIImage(systemName: "text.aligncenter"), style: .plain, target: nil, action: nil)
-        alignCenterButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.alignCenter, to: textView)
-        }
-        
-        let alignRightButton = UIBarButtonItem(image: UIImage(systemName: "text.alignright"), style: .plain, target: nil, action: nil)
-        alignRightButton.primaryAction = UIAction { _ in
-            self.applyFormatting(.alignRight, to: textView)
+        // Color picker button
+        let colorButton = UIBarButtonItem(image: UIImage(systemName: "paintpalette"), style: .plain, target: nil, action: nil)
+        colorButton.primaryAction = UIAction { _ in
+            self.showColorPicker(for: textView)
         }
         
         let spacer = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
@@ -117,15 +120,66 @@ struct RichTextEditor: UIViewRepresentable {
             textView.resignFirstResponder()
         }
         
-        toolbar.items = [
-            boldButton, italicButton, underlineButton, strikethroughButton,
-            spacer,
-            alignLeftButton, alignCenterButton, alignRightButton,
-            spacer,
-            doneButton
-        ]
+        // Group 1: Text style buttons
+        let styleGroup = [boldButton, italicButton, underlineButton, strikethroughButton]
+        
+        // Group 2: List and indentation buttons
+        let listGroup = [bulletListButton, numberedListButton, indentButton, outdentButton]
+        
+        // Group 3: Alignment buttons
+        let alignmentGroup = [alignLeftButton, alignCenterButton, alignRightButton]
+        
+        // Group 4: Special formatting
+        let specialGroup = [linkButton, colorButton]
+        
+        // Break up the complex expression into multiple steps
+        var items = [UIBarButtonItem]()
+        items.append(contentsOf: styleGroup)
+        items.append(spacer)
+        items.append(contentsOf: listGroup)
+        items.append(spacer)
+        items.append(contentsOf: alignmentGroup)
+        items.append(spacer)
+        items.append(contentsOf: specialGroup)
+        items.append(spacer)
+        items.append(doneButton)
+        
+        toolbar.items = items
         
         textView.inputAccessoryView = toolbar
+    }
+    
+    private func createFormattingButton(systemName: String, formatting: TextFormatting, textView: UITextView) -> UIBarButtonItem {
+        let button = UIBarButtonItem(image: UIImage(systemName: systemName), style: .plain, target: nil, action: nil)
+        button.primaryAction = UIAction { _ in
+            self.applyFormatting(formatting, to: textView)
+        }
+        return button
+    }
+    
+    private func showLinkDialog(for textView: UITextView) {
+        // This won't work directly in a UIViewRepresentable
+        // We need to use a UIAlertController from the hosting view controller
+        // For now, we'll just add a placeholder link
+        guard let selectedRange = textView.selectedTextRange else { return }
+        let selectedText = textView.text(in: selectedRange) ?? ""
+        
+        if !selectedText.isEmpty {
+            let url = URL(string: "https://example.com") ?? URL(string: "https://apple.com")!
+            self.applyFormatting(.insertLink(url, selectedText), to: textView)
+        }
+    }
+    
+    private func showColorPicker(for textView: UITextView) {
+        // This would ideally show a color picker
+        // We'll use a placeholder implementation with a few preset colors
+        guard let selectedRange = textView.selectedTextRange else { return }
+        let selectedText = textView.text(in: selectedRange) ?? ""
+        
+        if !selectedText.isEmpty {
+            // Apply a sample color
+            self.applyFormatting(.textColor(.systemBlue), to: textView)
+        }
     }
     
     private func applyFormatting(_ formatting: TextFormatting, to textView: UITextView) {
@@ -137,9 +191,17 @@ struct RichTextEditor: UIViewRepresentable {
             length: textView.offset(from: selectedRange.start, to: selectedRange.end)
         )
         
-        // If no text is selected and range length is 0, just return
+        // If no text is selected and range length is 0, just return for most formatting operations
+        // Use pattern matching instead of != operator for enum comparison
         if selectedTextRange.length == 0 {
-            return
+            switch formatting {
+            case .bulletList, .numberedList, .increaseIndent, .decreaseIndent:
+                // These formatting options can work with cursor placement
+                break
+            default:
+                // All other formatting options require selected text
+                return
+            }
         }
         
         switch formatting {
@@ -240,6 +302,109 @@ struct RichTextEditor: UIViewRepresentable {
             let style = NSMutableParagraphStyle()
             style.alignment = .right
             mutableAttributedText.addAttribute(.paragraphStyle, value: style, range: selectedTextRange)
+            
+        case .bulletList:
+            // Get paragraph range
+            let text = mutableAttributedText.string
+            let paragraphRange = getParagraphRange(for: selectedTextRange, in: text)
+            
+            // Apply bullet list formatting
+            let paragraphStyle = mutableAttributedText.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            
+            paragraphStyle.headIndent = 20.0
+            paragraphStyle.firstLineHeadIndent = 0.0
+            paragraphStyle.tailIndent = 0.0
+            
+            mutableAttributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+            
+            // Apply bullet symbol
+            let bullet = "• "
+            
+            // Check if bullet already exists at the start of the paragraph
+            // Using String's range-based methods instead of subscript
+            let nsText = text as NSString
+            let paraStart = min(paragraphRange.location, nsText.length)
+            let checkEndIdx = min(paraStart + 2, nsText.length)
+            
+            if checkEndIdx > paraStart {
+                let paragraphPrefix = nsText.substring(with: NSRange(location: paraStart, length: checkEndIdx - paraStart))
+                if !paragraphPrefix.hasPrefix(bullet) {
+                    let bulletText = NSAttributedString(string: bullet)
+                    mutableAttributedText.insert(bulletText, at: paragraphRange.location)
+                }
+            }
+            
+        case .numberedList:
+            // Get paragraph range
+            let text = mutableAttributedText.string
+            let paragraphRange = getParagraphRange(for: selectedTextRange, in: text)
+            
+            // Apply numbered list formatting
+            let paragraphStyle = mutableAttributedText.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            
+            paragraphStyle.headIndent = 20.0
+            paragraphStyle.firstLineHeadIndent = 0.0
+            paragraphStyle.tailIndent = 0.0
+            
+            mutableAttributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+            
+            // Apply number
+            let number = "1. "
+            
+            // Check for numbering properly using NSString
+            let nsText = text as NSString
+            let paraStart = min(paragraphRange.location, nsText.length)
+            let checkEndIdx = min(paraStart + 3, nsText.length)
+            
+            if checkEndIdx > paraStart {
+                let prefixRange = NSRange(location: paraStart, length: checkEndIdx - paraStart)
+                let paraPrefix = nsText.substring(with: prefixRange)
+                
+                // Check if it has a number prefix like "1. "
+                let regex = try? NSRegularExpression(pattern: "^\\d+\\.\\s", options: [])
+                let matches = regex?.matches(in: paraPrefix, options: [], range: NSRange(location: 0, length: paraPrefix.count))
+                
+                if matches == nil || matches?.isEmpty == true {
+                    let numberText = NSAttributedString(string: number)
+                    mutableAttributedText.insert(numberText, at: paragraphRange.location)
+                }
+            }
+            
+        case .increaseIndent:
+            // Get paragraph range
+            let paragraphRange = getParagraphRange(for: selectedTextRange, in: mutableAttributedText.string)
+            
+            // Get or create paragraph style
+            let paragraphStyle = mutableAttributedText.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            
+            // Increase indentation
+            paragraphStyle.headIndent += 20.0
+            paragraphStyle.firstLineHeadIndent += 20.0
+            
+            mutableAttributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+            
+        case .decreaseIndent:
+            // Get paragraph range
+            let paragraphRange = getParagraphRange(for: selectedTextRange, in: mutableAttributedText.string)
+            
+            // Get or create paragraph style
+            let paragraphStyle = mutableAttributedText.attribute(.paragraphStyle, at: paragraphRange.location, effectiveRange: nil) as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+            
+            // Decrease indentation (but not below 0)
+            paragraphStyle.headIndent = max(0, paragraphStyle.headIndent - 20.0)
+            paragraphStyle.firstLineHeadIndent = max(0, paragraphStyle.firstLineHeadIndent - 20.0)
+            
+            mutableAttributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+            
+        case .insertLink(let url, let title):
+            // Create a link attribute
+            let linkAttributes: [NSAttributedString.Key: Any] = [
+                .link: url,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+            
+            // Apply link attributes to the selected text
+            mutableAttributedText.addAttributes(linkAttributes, range: selectedTextRange)
         }
         
         // Update the text view
@@ -249,6 +414,12 @@ struct RichTextEditor: UIViewRepresentable {
         DispatchQueue.main.async {
             onTextChange(mutableAttributedText)
         }
+    }
+    
+    // Helper to get the full paragraph range containing the selection
+    private func getParagraphRange(for range: NSRange, in text: String) -> NSRange {
+        let nsString = text as NSString
+        return nsString.paragraphRange(for: range)
     }
     
     func makeCoordinator() -> Coordinator {

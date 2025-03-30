@@ -8,6 +8,7 @@ enum ChecklistEditorMode {
 struct ChecklistEditorView: View {
     @EnvironmentObject var checklistStore: ChecklistStore
     @EnvironmentObject var folderStore: FolderStore
+    @EnvironmentObject var tagStore: TagStore
     @Environment(\.dismiss) var dismiss
 
     let mode: ChecklistEditorMode
@@ -17,7 +18,7 @@ struct ChecklistEditorView: View {
     @State private var items: [ChecklistItem] = []
     @State private var newItem = ""
     @State private var selectedFolderID: UUID?
-    @State private var tags = ""
+    @State private var tagIDs: [UUID] = []
     
     // Original initializer for backward compatibility
     init(mode: ChecklistEditorMode, existingChecklist: ChecklistNote?) {
@@ -28,7 +29,7 @@ struct ChecklistEditorView: View {
             _title = State(initialValue: checklist.title)
             _items = State(initialValue: checklist.items)
             _selectedFolderID = State(initialValue: checklist.folderID)
-            // Tags would be initialized here if implemented
+            _tagIDs = State(initialValue: checklist.tagIDs)
         }
     }
     
@@ -40,6 +41,7 @@ struct ChecklistEditorView: View {
             _title = State(initialValue: checklist.title)
             _items = State(initialValue: checklist.items)
             _selectedFolderID = State(initialValue: checklist.folderID)
+            _tagIDs = State(initialValue: checklist.tagIDs)
         } else {
             self.mode = .new
             self.existingChecklist = nil
@@ -76,14 +78,18 @@ struct ChecklistEditorView: View {
                     }
                 }
 
-                Picker("Folder", selection: $selectedFolderID) {
-                    Text("None").tag(UUID?.none)
-                    ForEach(folderStore.folders) { folder in
-                        Text(folder.name).tag(Optional(folder.id))
+                Section(header: Text("Folder")) {
+                    Picker("Folder", selection: $selectedFolderID) {
+                        Text("None").tag(UUID?.none)
+                        ForEach(folderStore.folders) { folder in
+                            Text(folder.name).tag(Optional(folder.id))
+                        }
                     }
                 }
 
-                TextField("Tags (comma separated)", text: $tags)
+                Section {
+                    TagSelectorView(selectedTagIDs: $tagIDs)
+                }
             }
             .navigationTitle(mode == .new ? "New Checklist" : "Edit Checklist")
             .toolbar {
@@ -131,19 +137,20 @@ struct ChecklistEditorView: View {
                 folderID: selectedFolderID,
                 items: items,
                 isPinned: false,
-                date: Date()
+                date: Date(),
+                tagIDs: tagIDs
             )
-            checklistStore.checklists.append(checklist)
+            checklistStore.updateChecklist(checklist: checklist)
             
         case .edit:
             if let checklist = existingChecklist {
-                var updatedChecklist = checklist
-                updatedChecklist.title = title
-                updatedChecklist.items = items
-                updatedChecklist.folderID = selectedFolderID
-                updatedChecklist.date = Date()
-                
-                checklistStore.updateChecklist(checklist: updatedChecklist)
+                checklistStore.updateChecklist(
+                    checklist: checklist,
+                    title: title,
+                    items: items,
+                    folderID: selectedFolderID,
+                    tagIDs: tagIDs
+                )
             }
         }
     }

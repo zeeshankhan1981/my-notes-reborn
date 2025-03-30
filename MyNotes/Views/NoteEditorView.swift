@@ -9,6 +9,7 @@ enum NoteEditorMode {
 struct NoteEditorView: View {
     @EnvironmentObject var noteStore: NoteStore
     @EnvironmentObject var folderStore: FolderStore
+    @EnvironmentObject var tagStore: TagStore
     @Environment(\.dismiss) var dismiss
 
     let mode: NoteEditorMode
@@ -20,7 +21,7 @@ struct NoteEditorView: View {
     @State private var imageData: Data?
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedFolderID: UUID?
-    @State private var tags = ""
+    @State private var tagIDs = [UUID]()
     @State private var isShowingFormatting = false
     
     // Original initializer for backward compatibility
@@ -33,6 +34,7 @@ struct NoteEditorView: View {
             _content = State(initialValue: note.content)
             _imageData = State(initialValue: note.imageData)
             _selectedFolderID = State(initialValue: note.folderID)
+            _tagIDs = State(initialValue: note.tagIDs)
             
             // Initialize attributedContent from data if available
             if let attributedContentData = note.attributedContent,
@@ -48,8 +50,6 @@ struct NoteEditorView: View {
                     attributes: [.font: UIFont.preferredFont(forTextStyle: .body)]
                 ))
             }
-            
-            // Tags would be initialized here if tags were implemented
         } else {
             // Initialize with empty attributed string
             _attributedContent = State(initialValue: NSAttributedString(
@@ -68,6 +68,7 @@ struct NoteEditorView: View {
             _content = State(initialValue: note.content)
             _imageData = State(initialValue: note.imageData)
             _selectedFolderID = State(initialValue: note.folderID)
+            _tagIDs = State(initialValue: note.tagIDs)
             
             // Initialize attributedContent from data if available
             if let attributedContentData = note.attributedContent,
@@ -218,16 +219,9 @@ struct NoteEditorView: View {
                         }
                         .padding(.horizontal)
                         
-                        // Tags field (for future implementation)
+                        // Tags field
                         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-                            Text("Tags")
-                                .font(AppTheme.Typography.headline)
-                                .foregroundColor(AppTheme.Colors.textSecondary)
-                            
-                            TextField("Add tags separated by commas", text: $tags)
-                                .padding()
-                                .background(AppTheme.Colors.secondaryBackground)
-                                .cornerRadius(AppTheme.Dimensions.cornerRadius)
+                            TagSelectorView(selectedTagIDs: $tagIDs)
                         }
                         .padding(.horizontal)
                         
@@ -286,7 +280,8 @@ struct NoteEditorView: View {
                 content: content,
                 folderID: selectedFolderID,
                 imageData: imageData,
-                attributedContent: rtfdData
+                attributedContent: rtfdData,
+                tagIDs: tagIDs
             )
         case .edit:
             if let note = existingNote {
@@ -296,7 +291,8 @@ struct NoteEditorView: View {
                     content: content,
                     folderID: selectedFolderID,
                     imageData: imageData,
-                    attributedContent: rtfdData
+                    attributedContent: rtfdData,
+                    tagIDs: tagIDs
                 )
             }
         }

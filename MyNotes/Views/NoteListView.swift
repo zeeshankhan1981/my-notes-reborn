@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NoteListView: View {
     @EnvironmentObject var noteStore: NoteStore
+    @EnvironmentObject var tagStore: TagStore
     @State private var showingAdd = false
     @State private var selectedNote: Note?
     @State private var isEditing = false
@@ -10,16 +11,29 @@ struct NoteListView: View {
     @State private var isSelectionMode = false
     @State private var selectedNotes = Set<UUID>()
     @State private var isShowingDeleteConfirmation = false
+    @State private var selectedTagIDs = Set<UUID>()
+    @State private var showingTagFilter = false
     
     private var filteredNotes: [Note] {
-        if searchText.isEmpty {
-            return noteStore.notes
-        } else {
-            return noteStore.notes.filter { note in
+        var notes = noteStore.notes
+        
+        // Filter by search text
+        if !searchText.isEmpty {
+            notes = notes.filter { note in
                 note.title.localizedCaseInsensitiveContains(searchText) || 
                 note.content.localizedCaseInsensitiveContains(searchText)
             }
         }
+        
+        // Filter by selected tags
+        if !selectedTagIDs.isEmpty {
+            notes = notes.filter { note in
+                // A note matches if it has at least one of the selected tags
+                !Set(note.tagIDs).isDisjoint(with: selectedTagIDs)
+            }
+        }
+        
+        return notes
     }
     
     private var pinnedNotes: [Note] {
@@ -69,28 +83,46 @@ struct NoteListView: View {
     
     private var mainContentView: some View {
         ZStack {
-            AppTheme.Colors.background
-                .ignoresSafeArea()
+            if isSelectionMode {
+                selectionToolbar
+            }
             
             VStack(spacing: 0) {
-                if isSelectionMode {
-                    selectionToolbar
+                if isShowingSearch {
+                    searchBar
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-            
-                ScrollView {
-                    VStack(spacing: AppTheme.Dimensions.spacing) {
-                        if isShowingSearch {
-                            searchBar
-                        }
-                        
-                        noteContent
-                    }
-                    .padding(.top)
-                    .animation(AppTheme.Animation.standard, value: pinnedNotes)
-                    .animation(AppTheme.Animation.standard, value: unpinnedNotes)
+                
+                if showingTagFilter {
+                    TagFilterView(selectedTagIDs: $selectedTagIDs)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if filteredNotes.isEmpty {
+                    emptyStateView
+                } else {
+                    noteContent
                 }
             }
-            .animation(AppTheme.Animation.standard, value: isSelectionMode)
+            .background(AppTheme.Colors.background)
+        }
+        .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                for id in selectedNotes {
+                    if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
+                        noteStore.delete(note: noteToDelete)
+                    }
+                }
+                selectedNotes.removeAll()
+                isSelectionMode = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
         }
     }
     
@@ -163,7 +195,6 @@ struct NoteListView: View {
         .padding(8)
         .background(AppTheme.Colors.cardSurface)
         .cornerRadius(8)
-        .padding(.horizontal)
     }
     
     private var noteContent: some View {
@@ -249,17 +280,46 @@ struct NoteListView: View {
     
     private var leadingToolbarContent: some View {
         Group {
-            if !isSelectionMode {
-                Button(action: {
+            if isSelectionMode {
+                Button("Cancel") {
                     withAnimation {
-                        isShowingSearch.toggle()
-                        if !isShowingSearch {
-                            searchText = ""
-                        }
+                        isSelectionMode = false
+                        selectedNotes.removeAll()
                     }
-                }) {
-                    Image(systemName: isShowingSearch ? "xmark" : "magnifyingglass")
-                        .foregroundColor(AppTheme.Colors.primary)
+                }
+            } else {
+                Menu {
+                    Button {
+                        withAnimation {
+                            isShowingSearch.toggle()
+                            if isShowingSearch == false {
+                                searchText = ""
+                            }
+                        }
+                    } label: {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
+                    
+                    Button {
+                        withAnimation {
+                            showingTagFilter.toggle()
+                            if showingTagFilter == false {
+                                selectedTagIDs.removeAll()
+                            }
+                        }
+                    } label: {
+                        Label("Filter by Tags", systemImage: "tag")
+                    }
+                    
+                    Button {
+                        withAnimation {
+                            isSelectionMode = true
+                        }
+                    } label: {
+                        Label("Select Notes", systemImage: "checkmark.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }

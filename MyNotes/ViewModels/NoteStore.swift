@@ -51,7 +51,9 @@ class NoteStore: ObservableObject {
                 title: "Welcome to MyNotes", 
                 content: "This is a sample note to get you started. Try swiping this card left to delete it, or tap to edit.\n\nYou can create more notes by tapping the + button above.", 
                 folderID: nil, 
-                imageData: nil
+                imageData: nil,
+                attributedContent: nil,
+                tagIDs: []
             )
             
             // Add a pinned note
@@ -62,7 +64,9 @@ class NoteStore: ObservableObject {
                 folderID: nil,
                 isPinned: true,
                 date: Date(),
-                imageData: nil
+                imageData: nil,
+                attributedContent: nil,
+                tagIDs: []
             )
             saveNote(pinnedNote)
             
@@ -72,7 +76,7 @@ class NoteStore: ObservableObject {
         }
     }
     
-    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil) {
+    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
         let context = persistence.container.viewContext
         let newNote = Note(
             id: UUID(), 
@@ -82,7 +86,8 @@ class NoteStore: ObservableObject {
             isPinned: false, 
             date: Date(), 
             imageData: imageData,
-            attributedContent: attributedContent
+            attributedContent: attributedContent,
+            tagIDs: tagIDs
         )
         
         _ = CDNote.fromDomainModel(newNote, in: context)
@@ -91,7 +96,7 @@ class NoteStore: ObservableObject {
         loadNotes()
     }
     
-    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil) {
+    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
         let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.title = title
@@ -100,6 +105,7 @@ class NoteStore: ObservableObject {
         updatedNote.imageData = imageData
         updatedNote.date = Date()
         updatedNote.attributedContent = attributedContent
+        updatedNote.tagIDs = tagIDs
         
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         

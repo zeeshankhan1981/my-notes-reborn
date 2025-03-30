@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChecklistListView: View {
     @EnvironmentObject var checklistStore: ChecklistStore
+    @EnvironmentObject var tagStore: TagStore
     @State private var showingAdd = false
     @State private var selectedChecklist: ChecklistNote?
     @State private var isEditing = false
@@ -10,18 +11,31 @@ struct ChecklistListView: View {
     @State private var isSelectionMode = false
     @State private var selectedChecklists = Set<UUID>()
     @State private var isShowingDeleteConfirmation = false
+    @State private var selectedTagIDs = Set<UUID>()
+    @State private var showingTagFilter = false
     
     private var filteredChecklists: [ChecklistNote] {
-        if searchText.isEmpty {
-            return checklistStore.checklists
-        } else {
-            return checklistStore.checklists.filter { checklist in
+        var checklists = checklistStore.checklists
+        
+        // Filter by search text
+        if !searchText.isEmpty {
+            checklists = checklists.filter { checklist in
                 checklist.title.localizedCaseInsensitiveContains(searchText) || 
                 checklist.items.contains { item in
                     item.text.localizedCaseInsensitiveContains(searchText)
                 }
             }
         }
+        
+        // Filter by selected tags
+        if !selectedTagIDs.isEmpty {
+            checklists = checklists.filter { checklist in
+                // A checklist matches if it has at least one of the selected tags
+                !Set(checklist.tagIDs).isDisjoint(with: selectedTagIDs)
+            }
+        }
+        
+        return checklists
     }
     
     private var pinnedChecklists: [ChecklistNote] {
@@ -71,28 +85,46 @@ struct ChecklistListView: View {
     
     private var mainContentView: some View {
         ZStack {
-            AppTheme.Colors.background
-                .ignoresSafeArea()
+            if isSelectionMode {
+                selectionToolbar
+            }
             
             VStack(spacing: 0) {
-                if isSelectionMode {
-                    selectionToolbar
+                if isShowingSearch {
+                    searchBar
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-            
-                ScrollView {
-                    VStack(spacing: AppTheme.Dimensions.spacing) {
-                        if isShowingSearch {
-                            searchBar
-                        }
-                        
-                        checklistContent
-                    }
-                    .padding(.top)
-                    .animation(AppTheme.Animation.standard, value: pinnedChecklists)
-                    .animation(AppTheme.Animation.standard, value: unpinnedChecklists)
+                
+                if showingTagFilter {
+                    TagFilterView(selectedTagIDs: $selectedTagIDs)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if filteredChecklists.isEmpty {
+                    emptyStateView
+                } else {
+                    checklistContent
                 }
             }
-            .animation(AppTheme.Animation.standard, value: isSelectionMode)
+            .background(AppTheme.Colors.background)
+        }
+        .confirmationDialog("Are you sure you want to delete these checklists?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                for id in selectedChecklists {
+                    if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
+                        checklistStore.delete(checklist: checklistToDelete)
+                    }
+                }
+                selectedChecklists.removeAll()
+                isSelectionMode = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
         }
     }
     
@@ -165,7 +197,6 @@ struct ChecklistListView: View {
         .padding(8)
         .background(AppTheme.Colors.cardSurface)
         .cornerRadius(8)
-        .padding(.horizontal)
     }
     
     private var checklistContent: some View {
@@ -251,17 +282,46 @@ struct ChecklistListView: View {
     
     private var leadingToolbarContent: some View {
         Group {
-            if !isSelectionMode {
-                Button(action: {
+            if isSelectionMode {
+                Button("Cancel") {
                     withAnimation {
-                        isShowingSearch.toggle()
-                        if !isShowingSearch {
-                            searchText = ""
-                        }
+                        isSelectionMode = false
+                        selectedChecklists.removeAll()
                     }
-                }) {
-                    Image(systemName: isShowingSearch ? "xmark" : "magnifyingglass")
-                        .foregroundColor(AppTheme.Colors.primary)
+                }
+            } else {
+                Menu {
+                    Button {
+                        withAnimation {
+                            isShowingSearch.toggle()
+                            if isShowingSearch == false {
+                                searchText = ""
+                            }
+                        }
+                    } label: {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
+                    
+                    Button {
+                        withAnimation {
+                            showingTagFilter.toggle()
+                            if showingTagFilter == false {
+                                selectedTagIDs.removeAll()
+                            }
+                        }
+                    } label: {
+                        Label("Filter by Tags", systemImage: "tag")
+                    }
+                    
+                    Button {
+                        withAnimation {
+                            isSelectionMode = true
+                        }
+                    } label: {
+                        Label("Select Checklists", systemImage: "checkmark.circle")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }

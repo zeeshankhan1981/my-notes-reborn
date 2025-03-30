@@ -9,6 +9,7 @@ struct Note: Identifiable, Codable, Equatable {
     var date: Date
     var imageData: Data?
     var attributedContent: Data? // Stores NSAttributedString data
+    var tagIDs: [UUID] // IDs of associated tags
     
     // For equatable conformance
     static func == (lhs: Note, rhs: Note) -> Bool {
@@ -17,10 +18,10 @@ struct Note: Identifiable, Codable, Equatable {
     
     // For encoding and decoding attributedContent
     enum CodingKeys: String, CodingKey {
-        case id, title, content, folderID, isPinned, date, imageData, attributedContent
+        case id, title, content, folderID, isPinned, date, imageData, attributedContent, tagIDs
     }
     
-    init(id: UUID, title: String, content: String, folderID: UUID?, isPinned: Bool, date: Date, imageData: Data?, attributedContent: Data? = nil) {
+    init(id: UUID, title: String, content: String, folderID: UUID?, isPinned: Bool, date: Date, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
         self.id = id
         self.title = title
         self.content = content
@@ -29,5 +30,6 @@ struct Note: Identifiable, Codable, Equatable {
         self.date = date
         self.imageData = imageData
         self.attributedContent = attributedContent
+        self.tagIDs = tagIDs
     }
 }

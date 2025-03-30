@@ -46,27 +46,26 @@ class ChecklistStore: ObservableObject {
         if checklists.isEmpty {
             print("ChecklistStore: Adding test data as checklists array is empty")
             
-            // Create a shopping list
-            let shoppingList = ChecklistNote(
+            // Add a sample grocery checklist
+            let groceryList = ChecklistNote(
                 id: UUID(),
-                title: "Shopping List",
+                title: "Grocery List",
                 folderID: nil,
                 items: [
                     ChecklistItem(id: UUID(), text: "Milk", isDone: false),
                     ChecklistItem(id: UUID(), text: "Eggs", isDone: true),
-                    ChecklistItem(id: UUID(), text: "Bread", isDone: false),
-                    ChecklistItem(id: UUID(), text: "Apples", isDone: true),
-                    ChecklistItem(id: UUID(), text: "Coffee", isDone: false)
+                    ChecklistItem(id: UUID(), text: "Bread", isDone: false)
                 ],
                 isPinned: true,
-                date: Date()
+                date: Date(),
+                tagIDs: []
             )
-            saveChecklist(shoppingList)
+            saveChecklist(groceryList)
             
-            // Create a to-do list
+            // Add a to-do list
             let todoList = ChecklistNote(
                 id: UUID(),
-                title: "Things To Do",
+                title: "Today's Tasks",
                 folderID: nil,
                 items: [
                     ChecklistItem(id: UUID(), text: "Respond to emails", isDone: false),
@@ -74,7 +73,8 @@ class ChecklistStore: ObservableObject {
                     ChecklistItem(id: UUID(), text: "Schedule meeting", isDone: true)
                 ],
                 isPinned: false,
-                date: Date().addingTimeInterval(-3600) // 1 hour ago
+                date: Date().addingTimeInterval(-3600), // 1 hour ago
+                tagIDs: []
             )
             saveChecklist(todoList)
             
@@ -84,7 +84,7 @@ class ChecklistStore: ObservableObject {
         }
     }
 
-    func addChecklist(title: String, folderID: UUID?) {
+    func addChecklist(title: String, folderID: UUID?, tagIDs: [UUID] = []) {
         let context = persistence.container.viewContext
         let newChecklist = ChecklistNote(
             id: UUID(), 
@@ -92,7 +92,8 @@ class ChecklistStore: ObservableObject {
             folderID: folderID, 
             items: [], 
             isPinned: false, 
-            date: Date()
+            date: Date(),
+            tagIDs: tagIDs
         )
         
         _ = CDChecklistNote.fromDomainModel(newChecklist, in: context)
@@ -109,12 +110,22 @@ class ChecklistStore: ObservableObject {
     }
 
     func updateChecklist(checklist: ChecklistNote) {
+        print("ChecklistStore: Updating checklist '\(checklist.title)'")
         let context = persistence.container.viewContext
-        
         _ = CDChecklistNote.fromDomainModel(checklist, in: context)
-        
         saveContext()
         loadChecklists()
+    }
+    
+    func updateChecklist(checklist: ChecklistNote, title: String, items: [ChecklistItem], folderID: UUID?, tagIDs: [UUID] = []) {
+        var updatedChecklist = checklist
+        updatedChecklist.title = title
+        updatedChecklist.items = items
+        updatedChecklist.folderID = folderID
+        updatedChecklist.date = Date()
+        updatedChecklist.tagIDs = tagIDs
+        
+        updateChecklist(checklist: updatedChecklist)
     }
 
     func delete(checklist: ChecklistNote) {
