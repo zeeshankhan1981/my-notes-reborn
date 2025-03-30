@@ -11,7 +11,8 @@ extension CDNote {
             folderID: folder?.id,
             isPinned: isPinned,
             date: date ?? Date(),
-            imageData: imageData
+            imageData: imageData,
+            attributedContent: attributedContent
         )
     }
     
@@ -36,6 +37,7 @@ extension CDNote {
         cdNote.isPinned = note.isPinned
         cdNote.date = note.date
         cdNote.imageData = note.imageData
+        cdNote.attributedContent = note.attributedContent
         
         // Handle folder relationship if needed
         if let folderID = note.folderID {

@@ -33,9 +33,18 @@ class NoteStore: ObservableObject {
         }
     }
     
-    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?) {
+    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil) {
         let context = persistence.container.viewContext
-        let newNote = Note(id: UUID(), title: title, content: content, folderID: folderID, isPinned: false, date: Date(), imageData: imageData)
+        let newNote = Note(
+            id: UUID(), 
+            title: title, 
+            content: content, 
+            folderID: folderID, 
+            isPinned: false, 
+            date: Date(), 
+            imageData: imageData,
+            attributedContent: attributedContent
+        )
         
         _ = CDNote.fromDomainModel(newNote, in: context)
         
@@ -43,7 +52,7 @@ class NoteStore: ObservableObject {
         loadNotes()
     }
     
-    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?) {
+    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil) {
         let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.title = title
@@ -51,6 +60,7 @@ class NoteStore: ObservableObject {
         updatedNote.folderID = folderID
         updatedNote.imageData = imageData
         updatedNote.date = Date()
+        updatedNote.attributedContent = attributedContent
         
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         
