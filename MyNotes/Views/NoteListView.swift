@@ -83,6 +83,9 @@ struct NoteListView: View {
     
     private var mainContentView: some View {
         ZStack {
+            AppTheme.Colors.background
+                .ignoresSafeArea()
+            
             if isSelectionMode {
                 selectionToolbar
             }
@@ -98,17 +101,22 @@ struct NoteListView: View {
                 if showingTagFilter {
                     TagFilterView(selectedTagIDs: $selectedTagIDs)
                         .padding(.horizontal)
-                        .padding(.top, 8)
+                        .padding(.top, showingTagFilter ? 8 : 0)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
                 if filteredNotes.isEmpty {
                     emptyStateView
                 } else {
-                    noteContent
+                    ScrollView {
+                        noteContent
+                            .padding(.top, 8)
+                    }
+                    .safeAreaInset(edge: .bottom) {
+                        Color.clear.frame(height: 0)
+                    }
                 }
             }
-            .background(AppTheme.Colors.background)
         }
         .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
@@ -198,7 +206,7 @@ struct NoteListView: View {
     }
     
     private var noteContent: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 8) {
             // Pinned notes
             if !pinnedNotes.isEmpty {
                 pinnedNotesSection
@@ -207,11 +215,6 @@ struct NoteListView: View {
             // Unpinned notes
             if !unpinnedNotes.isEmpty {
                 unpinnedNotesSection
-            }
-            
-            // No notes view
-            if filteredNotes.isEmpty {
-                emptyStateView
             }
         }
     }
@@ -361,7 +364,7 @@ struct NoteListView: View {
     
     private var newNoteSheet: some View {
         NavigationView {
-            NoteEditorView(note: nil)
+            NoteEditorView(mode: .new, existingNote: nil)
                 .navigationTitle("New Note")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -376,7 +379,7 @@ struct NoteListView: View {
     
     private func editNoteSheet(_ note: Note) -> some View {
         NavigationView {
-            NoteEditorView(note: note)
+            NoteEditorView(mode: .edit, existingNote: note)
                 .navigationTitle("Edit Note")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

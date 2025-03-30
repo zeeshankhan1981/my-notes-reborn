@@ -49,88 +49,197 @@ struct ChecklistEditorView: View {
     }
 
     var body: some View {
-        NavigationView {
-            Form {
-                TextField("Title", text: $title)
-
-                Section(header: Text("Items")) {
-                    ForEach($items) { $item in
-                        HStack {
-                            Button(action: { item.isDone.toggle() }) {
-                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(item.isDone ? .green : .gray)
+        ScrollView {
+            VStack(spacing: 16) {
+                // Title field
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Title")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    TextField("Checklist title", text: $title)
+                        .font(AppTheme.Typography.title)
+                        .padding(10)
+                        .background(AppTheme.Colors.secondaryBackground)
+                        .cornerRadius(8)
+                }
+                .padding(.horizontal)
+                
+                Divider()
+                    .padding(.horizontal)
+                
+                // Items section
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ITEMS")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.horizontal)
+                    
+                    // Checklist items
+                    VStack(spacing: 0) {
+                        ForEach($items) { $item in
+                            HStack(spacing: 12) {
+                                Button(action: { item.isDone.toggle() }) {
+                                    Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(item.isDone ? .green : .gray)
+                                        .font(.system(size: 20))
+                                }
+                                .buttonStyle(.plain)
+                                
+                                TextField("Item", text: $item.text)
+                                    .font(AppTheme.Typography.body)
+                                
+                                Button(action: {
+                                    if let index = items.firstIndex(where: { $0.id == item.id }) {
+                                        items.remove(at: index)
+                                    }
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(AppTheme.Colors.textTertiary)
+                                        .font(.system(size: 16))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-                            TextField("Item", text: $item.text)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            
+                            if items.last?.id != item.id {
+                                Divider()
+                                    .padding(.leading, 42)
+                            }
                         }
                     }
-                    .onDelete { items.remove(atOffsets: $0) }
-                    .onMove { from, to in
-                        items.move(fromOffsets: from, toOffset: to)
-                    }
-
-                    HStack {
+                    .background(AppTheme.Colors.secondaryBackground)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                    
+                    // Add new item field
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle")
+                            .foregroundColor(AppTheme.Colors.primary)
+                            .font(.system(size: 20))
+                        
                         TextField("New Item", text: $newItem)
+                            .font(AppTheme.Typography.body)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                addNewItem()
+                            }
+                        
                         Button("Add") {
                             addNewItem()
                         }
+                        .font(AppTheme.Typography.footnote.bold())
+                        .foregroundColor(AppTheme.Colors.primary)
                         .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(AppTheme.Colors.secondaryBackground)
+                    .cornerRadius(8)
+                    .padding(.horizontal)
                 }
-
-                Section(header: Text("Folder")) {
-                    Picker("Folder", selection: $selectedFolderID) {
-                        Text("None").tag(UUID?.none)
-                        ForEach(folderStore.folders) { folder in
-                            Text(folder.name).tag(Optional(folder.id))
+                
+                // Folder Selection
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Folder")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.horizontal)
+                    
+                    Menu {
+                        Button("None") {
+                            selectedFolderID = nil
                         }
+                        
+                        Divider()
+                        
+                        ForEach(folderStore.folders) { folder in
+                            Button(folder.name) {
+                                selectedFolderID = folder.id
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(selectedFolderName)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(AppTheme.Colors.secondaryBackground)
+                        .cornerRadius(8)
+                        .padding(.horizontal)
                     }
                 }
-
-                Section {
+                
+                // Tags
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tags")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.horizontal)
+                    
                     TagSelectorView(selectedTagIDs: $tagIDs)
-                }
-            }
-            .navigationTitle(mode == .new ? "New Checklist" : "Edit Checklist")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveChecklist()
-                        dismiss()
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .padding(.horizontal)
                 }
                 
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                // Bottom padding
+                Spacer(minLength: 16)
+            }
+            .padding(.top)
+        }
+        .background(AppTheme.Colors.background)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    saveChecklist()
+                    dismiss()
                 }
-                
-                if !items.isEmpty {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        EditButton()
-                    }
+                .fontWeight(.bold)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
-            .onSubmit {
-                if !newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    addNewItem()
-                }
-            }
+        }
+    }
+    
+    private var selectedFolderName: String {
+        if let id = selectedFolderID, let folder = folderStore.folders.first(where: { $0.id == id }) {
+            return folder.name
+        } else {
+            return "None"
         }
     }
     
     private func addNewItem() {
         let trimmedText = newItem.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedText.isEmpty {
-            let item = ChecklistItem(id: UUID(), text: trimmedText, isDone: false)
-            items.append(item)
-            newItem = ""
+            withAnimation {
+                items.append(ChecklistItem(id: UUID(), text: trimmedText, isDone: false))
+                newItem = ""
+            }
         }
     }
     
     private func saveChecklist() {
-        switch mode {
-        case .new:
+        if let checklist = existingChecklist, mode == .edit {
+            // Create updated checklist with the new properties
+            var updatedChecklist = checklist
+            updatedChecklist.title = title
+            updatedChecklist.items = items
+            updatedChecklist.folderID = selectedFolderID
+            updatedChecklist.tagIDs = tagIDs
+            
+            // Use the correct method from ChecklistStore
+            checklistStore.updateChecklist(checklist: updatedChecklist)
+        } else {
+            // Create a new checklist
             let checklist = ChecklistNote(
                 id: UUID(),
                 title: title,
@@ -140,18 +249,9 @@ struct ChecklistEditorView: View {
                 date: Date(),
                 tagIDs: tagIDs
             )
-            checklistStore.updateChecklist(checklist: checklist)
             
-        case .edit:
-            if let checklist = existingChecklist {
-                checklistStore.updateChecklist(
-                    checklist: checklist,
-                    title: title,
-                    items: items,
-                    folderID: selectedFolderID,
-                    tagIDs: tagIDs
-                )
-            }
+            // Use the correct method from ChecklistStore
+            checklistStore.updateChecklist(checklist: checklist)
         }
     }
 }

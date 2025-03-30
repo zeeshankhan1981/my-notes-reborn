@@ -104,6 +104,33 @@ The app uses Core Data for persistent storage with the following entities:
 - Implements proper memory management with weak references
 - Separates creation from selection modes
 
+## UI Improvements (v0.1.2)
+
+### Editor Views
+- Fixed rich text editor formatting toolbar visibility and functionality
+- Improved layout consistency across note and checklist editors
+- Removed unwanted spacing at the top of editor views
+- Enhanced visual hierarchy with proper spacing and typography
+- Added smooth transitions for formatting toolbar
+
+### List Views
+- Fixed unwanted space above notes in list view
+- Improved search bar and tag filter transitions
+- Enhanced grid layout for notes and checklists
+- Added proper safe area handling
+
+### Component Improvements
+- Standardized padding and spacing across all views
+- Improved background color consistency
+- Enhanced card-based UI components
+- Added proper corner radiuses and shadows
+
+### Technical Changes
+- Removed deprecated `onChange(of:perform:)` usage
+- Fixed initializer mismatches between views and stores
+- Improved state management for formatting tools
+- Enhanced animation handling for UI transitions
+
 ## UI Improvements
 
 ### Navigation
@@ -266,6 +293,13 @@ MyNotes/
 - Code review required
 
 ## Version History
+
+### v0.1.2 (2025-04-01)
+- Fixed rich text editor formatting toolbar visibility and functionality
+- Improved layout consistency across note and checklist editors
+- Removed unwanted spacing at the top of editor views
+- Enhanced visual hierarchy with proper spacing and typography
+- Added smooth transitions for formatting toolbar
 
 ### v0.1.1 (2025-03-30)
 - Added tag filtering system

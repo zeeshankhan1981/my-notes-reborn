@@ -363,7 +363,7 @@ struct ChecklistListView: View {
     
     private var newChecklistSheet: some View {
         NavigationView {
-            ChecklistEditorView(checklist: nil)
+            ChecklistEditorView(mode: .new, existingChecklist: nil)
                 .navigationTitle("New Checklist")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -378,7 +378,7 @@ struct ChecklistListView: View {
     
     private func editChecklistSheet(_ checklist: ChecklistNote) -> some View {
         NavigationView {
-            ChecklistEditorView(checklist: checklist)
+            ChecklistEditorView(mode: .edit, existingChecklist: checklist)
                 .navigationTitle("Edit Checklist")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
