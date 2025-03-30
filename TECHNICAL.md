@@ -135,7 +135,39 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
-## Recent Changes (v0.1.2)
+## Recent Changes (v0.1.7)
+
+### UI Improvements
+- Fixed spacing issues in ChecklistListView
+- Removed redundant empty state checks
+- Improved checklist grid layout
+- Better visual hierarchy with proper spacing
+- Enhanced scroll performance
+
+### Code Quality
+- Improved code organization
+- Better error handling
+- Enhanced documentation
+- Consistent API usage
+- Enhanced testing coverage
+
+## Recent Changes (v0.1.6)
+
+### Core Data Optimizations
+- Fixed NoteStore implementation to match original structure
+- Maintained Core Data performance improvements
+- Restored type safety in Note model
+- Fixed parameter order and type conversions
+- Preserved original functionality while fixing errors
+
+### Performance
+- Optimized data fetching
+- Improved memory management
+- Enhanced error recovery
+- Better background processing
+- Improved UI responsiveness
+
+## Recent Changes (v0.1.5)
 
 ### Typography System
 - Implemented function-based Typography API

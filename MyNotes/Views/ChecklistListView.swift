@@ -200,21 +200,19 @@ struct ChecklistListView: View {
     }
     
     private var checklistContent: some View {
-        Group {
-            // Pinned checklists
-            if !pinnedChecklists.isEmpty {
-                pinnedChecklistsSection
+        ScrollView {
+            VStack(spacing: AppTheme.Dimensions.spacing) {
+                // Pinned checklists
+                if !pinnedChecklists.isEmpty {
+                    pinnedChecklistsSection
+                }
+                
+                // Unpinned checklists
+                if !unpinnedChecklists.isEmpty {
+                    unpinnedChecklistsSection
+                }
             }
-            
-            // Unpinned checklists
-            if !unpinnedChecklists.isEmpty {
-                unpinnedChecklistsSection
-            }
-            
-            // No checklists view
-            if filteredChecklists.isEmpty {
-                emptyStateView
-            }
+            .padding(.top, AppTheme.Dimensions.smallSpacing)
         }
     }
     

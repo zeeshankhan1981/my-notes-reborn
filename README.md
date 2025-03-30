@@ -24,6 +24,7 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Task completion tracking
   - Rich text formatting in checklists
   - Tag support for checklists
+  - Clean, minimal UI with no unnecessary spacing
 
 - 📁 Folder Organization
   - Organize notes into folders
@@ -62,21 +63,35 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
-### v0.1.2 (2025-03-30)
+### v0.1.7 (2025-03-30)
+- Fixed UI spacing issues in ChecklistListView
+- Removed redundant empty state checks
+- Improved checklist grid layout
+- Better visual hierarchy with proper spacing
+- Enhanced scroll performance
+
+### v0.1.6 (2025-03-30)
+- Fixed NoteStore implementation to match original structure
+- Maintained Core Data performance improvements
+- Restored type safety in Note model
+- Fixed parameter order and type conversions
+- Preserved original functionality while fixing errors
+
+### v0.1.5 (2025-03-30)
 - Redesigned UI to match iA Writer's minimalist aesthetic
 - Implemented consistent monospaced typography throughout the app
 - Enhanced typography system with proper function-based API
 - Fixed Typography-related compile-time errors
 - Improved code organization and consistency
 
-### v0.1.1 (2025-03-30)
+### v0.1.4 (2025-03-30)
 - Added tag filtering system for notes and checklists
 - Enhanced rich text editor with new formatting options
 - Fixed RichTextEditor compile-time errors
 - Added tag management UI components
 - Updated list views with filtering capabilities
 
-### v0.1.0 (2025-03-29)
+### v0.1.3 (2025-03-29)
 - Initial release with basic note-taking functionality
 - Core Data integration
 - Basic UI components
