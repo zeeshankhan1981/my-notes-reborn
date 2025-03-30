@@ -12,7 +12,7 @@ struct ChecklistCardView: View {
     // Threshold for delete action
     private let deleteThreshold: CGFloat = -80
     // Visual indicator width for swipe hint
-    private let swipeIndicatorWidth: CGFloat = 5
+    private let swipeIndicatorWidth: CGFloat = 3 // Thinner for more subtlety
     
     var body: some View {
         ZStack {
@@ -20,27 +20,26 @@ struct ChecklistCardView: View {
             HStack {
                 Spacer()
                 
-                // Delete indicator
-                VStack {
+                // Delete indicator - more subtle and refined
+                VStack(spacing: AppTheme.Dimensions.tinySpacing) {
                     Image(systemName: "trash")
-                        .font(.title2)
+                        .font(.body)
                         .foregroundColor(.white)
                     
                     Text("Delete")
-                        .font(.footnote)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
                 }
-                .frame(width: max(abs(min(offset, 0)), 0), height: 100)
-                .padding(.horizontal, 20)
-                .background(Color.red)
+                .frame(width: max(abs(min(offset, 0)), 0), height: 80)
+                .padding(.horizontal, AppTheme.Dimensions.spacing)
+                .background(AppTheme.Colors.error.opacity(0.9))
                 .cornerRadius(AppTheme.Dimensions.cornerRadius)
             }
             
-            // Card content
+            // Card content - cleaner, more typography-focused design
             VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
                 // Title and pin
-                HStack {
+                HStack(alignment: .top) {
                     Text(checklist.title)
                         .font(AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.Colors.textPrimary)
@@ -50,17 +49,25 @@ struct ChecklistCardView: View {
                     
                     if checklist.isPinned {
                         Image(systemName: "pin.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundColor(AppTheme.Colors.accent.opacity(0.8))
                             .font(.caption)
                     }
                 }
                 
-                // Progress bar
-                ProgressView(value: completionPercentage, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.primary))
-                    .frame(height: 4)
+                // Subtle divider
+                Rectangle()
+                    .fill(AppTheme.Colors.divider)
+                    .frame(height: 1)
+                    .padding(.vertical, AppTheme.Dimensions.tinySpacing)
+                    .opacity(0.6)
                 
-                // Completion status
+                // Progress bar - more refined
+                ProgressView(value: completionPercentage, total: 1.0)
+                    .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.Colors.accent.opacity(0.8)))
+                    .frame(height: 3) // Thinner for more subtlety
+                    .padding(.vertical, AppTheme.Dimensions.tinySpacing)
+                
+                // Completion status - cleaner typography
                 HStack {
                     Text("\(completedCount)/\(checklist.items.count) completed")
                         .font(AppTheme.Typography.caption)
@@ -74,21 +81,23 @@ struct ChecklistCardView: View {
                         .foregroundColor(AppTheme.Colors.textTertiary)
                 }
                 
-                // Preview of checklist items
+                // Preview of checklist items - more refined presentation
                 if !checklist.items.isEmpty {
                     VStack(alignment: .leading, spacing: AppTheme.Dimensions.tinySpacing) {
                         ForEach(Array(checklist.items.prefix(3)), id: \.id) { item in
                             HStack(spacing: AppTheme.Dimensions.smallSpacing) {
+                                // More refined checkmark style
                                 Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(item.isDone ? .green : AppTheme.Colors.textTertiary)
+                                    .foregroundColor(item.isDone ? AppTheme.Colors.success.opacity(0.8) : AppTheme.Colors.textTertiary)
                                     .font(.caption)
                                 
                                 Text(item.text)
-                                    .font(AppTheme.Typography.caption)
+                                    .font(AppTheme.Typography.body)
                                     .foregroundColor(AppTheme.Colors.textSecondary)
                                     .strikethrough(item.isDone)
                                     .lineLimit(1)
                             }
+                            .padding(.vertical, 1) // Slight padding for better readability
                         }
                         
                         if checklist.items.count > 3 {
@@ -96,30 +105,31 @@ struct ChecklistCardView: View {
                                 .font(AppTheme.Typography.caption)
                                 .foregroundColor(AppTheme.Colors.textTertiary)
                                 .italic()
+                                .padding(.top, 2)
                         }
                     }
-                    .padding(.top, AppTheme.Dimensions.smallSpacing)
+                    .padding(.top, AppTheme.Dimensions.tinySpacing)
                 }
             }
             .padding(AppTheme.Dimensions.spacing)
             .background(
                 ZStack(alignment: .trailing) {
-                    AppTheme.Colors.secondaryBackground
+                    AppTheme.Colors.cardSurface
                     
-                    // Swipe hint indicator - subtle visual cue that the card is swipeable
+                    // Swipe hint indicator - more subtle
                     if offset == 0 && !isSwiping {
                         Rectangle()
-                            .fill(Color.red.opacity(0.3))
+                            .fill(AppTheme.Colors.error.opacity(0.2))
                             .frame(width: swipeIndicatorWidth)
                     }
                 }
             )
             .cornerRadius(AppTheme.Dimensions.cornerRadius)
-            .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
-                    radius: isPressed ? 2 : 5, 
+            .shadow(color: AppTheme.Colors.cardShadow, 
+                    radius: isPressed ? 1 : AppTheme.Dimensions.cardElevation, 
                     x: 0, 
-                    y: isPressed ? 1 : 2)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
+                    y: isPressed ? 0 : AppTheme.Dimensions.cardElevation/2)
+            .scaleEffect(isPressed ? 0.99 : 1.0) // More subtle scale
             .offset(x: offset)
             .animation(AppTheme.Animation.quick, value: isPressed)
             .gesture(
@@ -145,7 +155,7 @@ struct ChecklistCardView: View {
                         }
                     }
                     .onEnded { gesture in
-                        withAnimation(.spring()) {
+                        withAnimation(AppTheme.Animation.subtle) {
                             if offset < deleteThreshold {
                                 // Delete the checklist with animation
                                 offset = -UIScreen.main.bounds.width
@@ -193,10 +203,9 @@ struct ChecklistCardView_Previews: PreviewProvider {
                 title: "Shopping List",
                 folderID: nil,
                 items: [
-                    ChecklistItem(id: UUID(), text: "Milk", isDone: true),
+                    ChecklistItem(id: UUID(), text: "Apples", isDone: true),
                     ChecklistItem(id: UUID(), text: "Bread", isDone: false),
-                    ChecklistItem(id: UUID(), text: "Eggs", isDone: false),
-                    ChecklistItem(id: UUID(), text: "Butter", isDone: true)
+                    ChecklistItem(id: UUID(), text: "Milk", isDone: false)
                 ],
                 isPinned: true,
                 date: Date()

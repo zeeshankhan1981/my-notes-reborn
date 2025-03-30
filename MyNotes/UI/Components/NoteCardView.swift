@@ -12,7 +12,7 @@ struct NoteCardView: View {
     // Threshold for delete action
     private let deleteThreshold: CGFloat = -80
     // Visual indicator width for swipe hint
-    private let swipeIndicatorWidth: CGFloat = 5
+    private let swipeIndicatorWidth: CGFloat = 3 // Thinner for more subtlety
     
     var body: some View {
         ZStack {
@@ -20,27 +20,26 @@ struct NoteCardView: View {
             HStack {
                 Spacer()
                 
-                // Delete indicator
-                VStack {
+                // Delete indicator - more subtle and refined
+                VStack(spacing: AppTheme.Dimensions.tinySpacing) {
                     Image(systemName: "trash")
-                        .font(.title2)
+                        .font(.body)
                         .foregroundColor(.white)
                     
                     Text("Delete")
-                        .font(.footnote)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
                 }
-                .frame(width: max(abs(min(offset, 0)), 0), height: 100)
-                .padding(.horizontal, 20)
-                .background(Color.red)
+                .frame(width: max(abs(min(offset, 0)), 0), height: 80)
+                .padding(.horizontal, AppTheme.Dimensions.spacing)
+                .background(AppTheme.Colors.error.opacity(0.9))
                 .cornerRadius(AppTheme.Dimensions.cornerRadius)
             }
             
-            // Card content
+            // Card content - cleaner, more typography-focused design
             VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
                 // Title and pin
-                HStack {
+                HStack(alignment: .top) {
                     Text(note.title)
                         .font(AppTheme.Typography.headline)
                         .foregroundColor(AppTheme.Colors.textPrimary)
@@ -50,57 +49,67 @@ struct NoteCardView: View {
                     
                     if note.isPinned {
                         Image(systemName: "pin.fill")
-                            .foregroundColor(.yellow)
+                            .foregroundColor(AppTheme.Colors.accent.opacity(0.8))
                             .font(.caption)
                     }
                 }
                 
-                // Preview of content
+                // Subtle divider
+                Rectangle()
+                    .fill(AppTheme.Colors.divider)
+                    .frame(height: 1)
+                    .padding(.vertical, AppTheme.Dimensions.tinySpacing)
+                    .opacity(0.6)
+                
+                // Preview of content - more refined typography
                 Text(note.content)
-                    .font(AppTheme.Typography.subheadline)
+                    .font(AppTheme.Typography.body)
                     .foregroundColor(AppTheme.Colors.textSecondary)
                     .lineLimit(2)
+                    .lineSpacing(2)
                 
                 Spacer()
                 
-                // Date
+                // Date - more minimal
                 HStack {
                     Spacer()
                     Text(formattedDate)
                         .font(AppTheme.Typography.caption)
                         .foregroundColor(AppTheme.Colors.textTertiary)
+                        .padding(.top, AppTheme.Dimensions.tinySpacing)
                 }
                 
-                // Image thumbnail if present
+                // Image thumbnail if present - more refined presentation
                 if let imageData = note.imageData, let uiImage = UIImage(data: imageData) {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 120)
+                        .frame(height: 100) // Slightly smaller
                         .frame(maxWidth: .infinity)
                         .cornerRadius(AppTheme.Dimensions.smallCornerRadius)
                         .clipped()
+                        .padding(.top, AppTheme.Dimensions.smallSpacing)
                 }
             }
             .padding(AppTheme.Dimensions.spacing)
             .background(
                 ZStack(alignment: .trailing) {
-                    AppTheme.Colors.secondaryBackground
+                    AppTheme.Colors.cardSurface
                     
-                    // Swipe hint indicator - subtle visual cue that the card is swipeable
+                    // Swipe hint indicator - more subtle
                     if offset == 0 && !isSwiping {
                         Rectangle()
-                            .fill(Color.red.opacity(0.3))
+                            .fill(AppTheme.Colors.error.opacity(0.2))
                             .frame(width: swipeIndicatorWidth)
                     }
                 }
             )
             .cornerRadius(AppTheme.Dimensions.cornerRadius)
-            .shadow(color: Color.black.opacity(isPressed ? 0.02 : 0.05), 
-                    radius: isPressed ? 2 : 5, 
+            .shadow(color: AppTheme.Colors.cardShadow, 
+                    radius: isPressed ? 1 : AppTheme.Dimensions.cardElevation, 
                     x: 0, 
-                    y: isPressed ? 1 : 2)
-            .scaleEffect(isPressed ? 0.98 : 1.0)
+                    y: isPressed ? 0 : AppTheme.Dimensions.cardElevation/2)
+            .scaleEffect(isPressed ? 0.99 : 1.0) // More subtle scale
             .offset(x: offset)
             .animation(AppTheme.Animation.quick, value: isPressed)
             .gesture(
@@ -126,7 +135,7 @@ struct NoteCardView: View {
                         }
                     }
                     .onEnded { gesture in
-                        withAnimation(.spring()) {
+                        withAnimation(AppTheme.Animation.subtle) {
                             if offset < deleteThreshold {
                                 // Delete the note with animation
                                 offset = -UIScreen.main.bounds.width
