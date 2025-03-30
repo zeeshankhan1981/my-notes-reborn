@@ -4,6 +4,7 @@ import Combine
 
 class NoteStore: ObservableObject {
     @Published var notes: [Note] = []
+    
     private let persistence = PersistenceController.shared
     private var cancellables = Set<AnyCancellable>()
     

@@ -109,8 +109,18 @@ struct NoteListView: View {
                     emptyStateView
                 } else {
                     ScrollView {
-                        noteContent
-                            .padding(.top, 8)
+                        LazyVStack(spacing: 8) {
+                            // Pinned notes
+                            if !pinnedNotes.isEmpty {
+                                pinnedNotesSection
+                            }
+                            
+                            // Unpinned notes
+                            if !unpinnedNotes.isEmpty {
+                                unpinnedNotesSection
+                            }
+                        }
+                        .padding(.top, 8)
                     }
                     .safeAreaInset(edge: .bottom) {
                         Color.clear.frame(height: 0)
@@ -203,20 +213,6 @@ struct NoteListView: View {
         .padding(8)
         .background(AppTheme.Colors.cardSurface)
         .cornerRadius(8)
-    }
-    
-    private var noteContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Pinned notes
-            if !pinnedNotes.isEmpty {
-                pinnedNotesSection
-            }
-            
-            // Unpinned notes
-            if !unpinnedNotes.isEmpty {
-                unpinnedNotesSection
-            }
-        }
     }
     
     private var pinnedNotesSection: some View {
