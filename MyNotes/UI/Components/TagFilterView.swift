@@ -9,7 +9,7 @@ struct TagFilterView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text("Filter by Tags")
-                    .font(AppTheme.Typography.caption)
+                    .font(AppTheme.Typography.caption())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                 
                 Spacer()
@@ -28,7 +28,7 @@ struct TagFilterView: View {
             if isExpanded {
                 if tagStore.tags.isEmpty {
                     Text("No tags available")
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                         .padding(.vertical, 4)
                 } else {
@@ -40,7 +40,7 @@ struct TagFilterView: View {
                                 }
                             }) {
                                 Text("Clear All")
-                                    .font(AppTheme.Typography.footnote)
+                                    .font(AppTheme.Typography.caption())
                                     .foregroundColor(AppTheme.Colors.textSecondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -72,7 +72,7 @@ struct TagFilterView: View {
             if !selectedTagIDs.isEmpty {
                 HStack {
                     Text("Active filters:")
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -120,7 +120,7 @@ struct TagFilterItem: View {
     var body: some View {
         Button(action: action) {
             Text(tag.name)
-                .font(AppTheme.Typography.footnote)
+                .font(AppTheme.Typography.caption())
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
@@ -129,9 +129,37 @@ struct TagFilterItem: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.Dimensions.smallCornerRadius)
-                        .stroke(isSelected ? tag.color : AppTheme.Colors.textTertiary.opacity(0.3), lineWidth: isSelected ? 1.5 : 0.5)
+                        .stroke(isSelected ? tag.color : AppTheme.Colors.secondaryBackground, lineWidth: 1)
                 )
         }
+    }
+}
+
+struct TagBadgeView: View {
+    let tag: Tag
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(tag.color)
+                .frame(width: 8, height: 8)
+            
+            Text(tag.name)
+                .font(AppTheme.Typography.caption())
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.Dimensions.smallCornerRadius)
+                .fill(AppTheme.Colors.secondaryBackground.opacity(0.5))
+        )
     }
 }
 

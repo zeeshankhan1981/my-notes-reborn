@@ -148,7 +148,7 @@ struct NoteListView: View {
                 Spacer()
                 
                 Text("\(selectedNotes.count) selected")
-                    .font(AppTheme.Typography.body)
+                    .font(AppTheme.Typography.body())
                     .foregroundColor(AppTheme.Colors.textPrimary)
                 
                 Spacer()
@@ -189,7 +189,7 @@ struct NoteListView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(AppTheme.Colors.textTertiary)
             TextField("Search notes...", text: $searchText)
-                .font(AppTheme.Typography.body)
+                .font(AppTheme.Typography.body())
             
             if !searchText.isEmpty {
                 Button(action: {
@@ -223,7 +223,7 @@ struct NoteListView: View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             HStack {
                 Text("Pinned")
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.headline())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                 
                 Spacer()
@@ -241,7 +241,7 @@ struct NoteListView: View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             if !pinnedNotes.isEmpty {
                 Text("Notes")
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.headline())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                     .padding(.horizontal)
             }
@@ -269,11 +269,11 @@ struct NoteListView: View {
                 .foregroundColor(AppTheme.Colors.textTertiary)
             
             Text(searchText.isEmpty ? "No Notes" : "No Results")
-                .font(AppTheme.Typography.title)
+                .font(AppTheme.Typography.title())
                 .foregroundColor(AppTheme.Colors.textPrimary)
             
             Text(searchText.isEmpty ? "Tap + to create a new note" : "Try a different search")
-                .font(AppTheme.Typography.body)
+                .font(AppTheme.Typography.body())
                 .foregroundColor(AppTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }

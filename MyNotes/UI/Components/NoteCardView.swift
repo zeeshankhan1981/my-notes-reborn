@@ -50,7 +50,7 @@ struct NoteCardView: View {
                     }
                     
                     Text(note.title)
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.Colors.textPrimary)
                         .lineLimit(1)
@@ -66,7 +66,7 @@ struct NoteCardView: View {
                 
                 // Content preview
                 Text(note.content)
-                    .font(AppTheme.Typography.body)
+                    .font(AppTheme.Typography.body())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                     .lineLimit(2)
                     .padding(.bottom, 4)
@@ -75,7 +75,7 @@ struct NoteCardView: View {
                 HStack {
                     Spacer()
                     Text(formattedDate)
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                 }
             }

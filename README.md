@@ -1,13 +1,14 @@
 # MyNotes
 
-A modern, feature-rich note-taking app built with SwiftUI and Core Data.
+A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired by iA Writer's clean design.
 
 ## Features
 
 - 📝 Rich Text Editing
-  - Bold, italic, and underline formatting
-  - Bullet and numbered lists
-  - Text color and highlight options
+  - Clean, distraction-free writing experience
+  - Monospaced font for better focus
+  - Minimal formatting tools (bold, italic, underline)
+  - Text color customization
   - Link insertion
   - Custom font sizes
   - Text alignment (left, center, right)
@@ -60,6 +61,13 @@ Feel free to submit issues and enhancement requests!
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Version History
+
+### v0.1.2 (2025-03-30)
+- Redesigned UI to match iA Writer's minimalist aesthetic
+- Implemented consistent monospaced typography throughout the app
+- Enhanced typography system with proper function-based API
+- Fixed Typography-related compile-time errors
+- Improved code organization and consistency
 
 ### v0.1.1 (2025-03-30)
 - Added tag filtering system for notes and checklists

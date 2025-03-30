@@ -142,7 +142,7 @@ struct ChecklistListView: View {
                 Spacer()
                 
                 Text("\(selectedChecklists.count) selected")
-                    .font(AppTheme.Typography.body)
+                    .font(AppTheme.Typography.body())
                     .foregroundColor(AppTheme.Colors.textPrimary)
                 
                 Spacer()
@@ -183,7 +183,7 @@ struct ChecklistListView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(AppTheme.Colors.textTertiary)
             TextField("Search checklists...", text: $searchText)
-                .font(AppTheme.Typography.body)
+                .font(AppTheme.Typography.body())
             
             if !searchText.isEmpty {
                 Button(action: {
@@ -222,7 +222,7 @@ struct ChecklistListView: View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             HStack {
                 Text("Pinned")
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.headline())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                 
                 Spacer()
@@ -240,7 +240,7 @@ struct ChecklistListView: View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             if !pinnedChecklists.isEmpty {
                 Text("Checklists")
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.headline())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                     .padding(.horizontal)
             }
@@ -268,11 +268,11 @@ struct ChecklistListView: View {
                 .foregroundColor(AppTheme.Colors.textTertiary)
             
             Text(searchText.isEmpty ? "No Checklists" : "No Results")
-                .font(AppTheme.Typography.title)
+                .font(AppTheme.Typography.title())
                 .foregroundColor(AppTheme.Colors.textPrimary)
             
             Text(searchText.isEmpty ? "Tap + to create a new checklist" : "Try a different search")
-                .font(AppTheme.Typography.body)
+                .font(AppTheme.Typography.body())
                 .foregroundColor(AppTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
         }

@@ -19,7 +19,7 @@ struct ChecklistEditorView: View {
     @State private var newItem = ""
     @State private var selectedFolderID: UUID?
     @State private var tagIDs: [UUID] = []
-    
+
     // Original initializer for backward compatibility
     init(mode: ChecklistEditorMode, existingChecklist: ChecklistNote?) {
         self.mode = mode
@@ -54,11 +54,11 @@ struct ChecklistEditorView: View {
                 // Title field
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Title")
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .foregroundColor(AppTheme.Colors.textSecondary)
                     
                     TextField("Checklist title", text: $title)
-                        .font(AppTheme.Typography.title)
+                        .font(AppTheme.Typography.title())
                         .padding(10)
                         .background(AppTheme.Colors.secondaryBackground)
                         .cornerRadius(8)
@@ -71,7 +71,7 @@ struct ChecklistEditorView: View {
                 // Items section
                 VStack(alignment: .leading, spacing: 8) {
                     Text("ITEMS")
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .foregroundColor(AppTheme.Colors.textSecondary)
                         .padding(.horizontal)
                     
@@ -87,7 +87,7 @@ struct ChecklistEditorView: View {
                                 .buttonStyle(.plain)
                                 
                                 TextField("Item", text: $item.text)
-                                    .font(AppTheme.Typography.body)
+                                    .font(AppTheme.Typography.body())
                                 
                                 Button(action: {
                                     if let index = items.firstIndex(where: { $0.id == item.id }) {
@@ -120,7 +120,7 @@ struct ChecklistEditorView: View {
                             .font(.system(size: 20))
                         
                         TextField("New Item", text: $newItem)
-                            .font(AppTheme.Typography.body)
+                            .font(AppTheme.Typography.body())
                             .submitLabel(.done)
                             .onSubmit {
                                 addNewItem()
@@ -129,7 +129,7 @@ struct ChecklistEditorView: View {
                         Button("Add") {
                             addNewItem()
                         }
-                        .font(AppTheme.Typography.footnote.bold())
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.primary)
                         .disabled(newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
@@ -143,7 +143,7 @@ struct ChecklistEditorView: View {
                 // Folder Selection
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Folder")
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .foregroundColor(AppTheme.Colors.textSecondary)
                         .padding(.horizontal)
                     
@@ -176,7 +176,7 @@ struct ChecklistEditorView: View {
                 // Tags
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Tags")
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .foregroundColor(AppTheme.Colors.textSecondary)
                         .padding(.horizontal)
                     

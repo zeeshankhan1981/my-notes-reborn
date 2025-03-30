@@ -104,6 +104,59 @@ The app uses Core Data for persistent storage with the following entities:
 - Implements proper memory management with weak references
 - Separates creation from selection modes
 
+### UI Components
+- Custom typography system with monospaced fonts
+- Consistent theming across the app
+- Minimalist design inspired by iA Writer
+- Custom layout components
+- Reusable UI elements
+
+### Performance Optimizations
+- Lazy loading of content
+- Efficient list rendering
+- Optimized image handling
+- Memory management
+
+## Code Organization
+
+### Directory Structure
+```
+MyNotes/
+├── Models/           # Data models
+├── ViewModels/       # View models and business logic
+├── Views/           # SwiftUI views
+├── CoreData/         # Core Data implementation
+└── Assets.xcassets/ # App assets
+```
+
+### File Naming Conventions
+- Models: PascalCase (e.g., `Note.swift`)
+- ViewModels: PascalCase + Store suffix (e.g., `NoteStore.swift`)
+- Views: PascalCase (e.g., `NoteListView.swift`)
+- CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
+
+## Recent Changes (v0.1.2)
+
+### Typography System
+- Implemented function-based Typography API
+- Consistent monospaced font usage
+- Improved typography measurements
+- Better font size and weight management
+
+### UI Improvements
+- Redesigned editor to match iA Writer's aesthetic
+- Enhanced formatting toolbar with SF Symbols
+- Improved visual feedback for actions
+- Better color picker integration
+- Consistent spacing and layout
+
+### Code Quality
+- Fixed duplicate view declarations
+- Improved error handling
+- Better code organization
+- Consistent API usage
+- Enhanced documentation
+
 ## UI Improvements (v0.1.2)
 
 ### Editor Views
@@ -163,24 +216,6 @@ The app uses Core Data for persistent storage with the following entities:
 - Optimized animations
 - Memory management
 - Lazy loading of content
-
-## Code Organization
-
-### Directory Structure
-```
-MyNotes/
-├── Models/           # Data models
-├── ViewModels/       # View models and business logic
-├── Views/           # SwiftUI views
-├── CoreData/         # Core Data implementation
-└── Assets.xcassets/ # App assets
-```
-
-### File Naming Conventions
-- Models: PascalCase (e.g., `Note.swift`)
-- ViewModels: PascalCase + Store suffix (e.g., `NoteStore.swift`)
-- Views: PascalCase (e.g., `NoteListView.swift`)
-- CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
 ## Performance Considerations
 

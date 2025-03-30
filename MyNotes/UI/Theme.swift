@@ -3,138 +3,168 @@ import SwiftUI
 struct AppTheme {
     // MARK: - Colors
     struct Colors {
-        // Base colors - more refined and subdued
-        static let primary = Color("AppPrimaryColor")
+        // Base colors - minimal and focused
+        static let primary = Color("AppPrimaryColor") 
         static let secondary = Color("AppSecondaryColor")
-        static let accent = Color("AccentColor")
-        static let background = Color("BackgroundColor")
-        static let secondaryBackground = Color("SecondaryBackgroundColor")
+        static let accent = Color.blue // Simple blue accent like iA Writer
+        static let background = Color.white // Clean white background
+        static let secondaryBackground = Color(UIColor.systemGray6) // Very subtle gray
         
-        // Text colors - higher contrast for better readability
-        static let textPrimary = Color("TextPrimaryColor")
-        static let textSecondary = Color("TextSecondaryColor")
-        static let textTertiary = Color("TextTertiaryColor")
+        // Text colors - high contrast for better readability
+        static let textPrimary = Color.black // Pure black for text
+        static let textSecondary = Color(UIColor.darkGray)
+        static let textTertiary = Color(UIColor.gray)
         
-        // Status colors - slightly desaturated for a more refined look
-        static let success = Color.green.opacity(0.9)
-        static let warning = Color.yellow.opacity(0.9)
-        static let error = Color.red.opacity(0.9)
-        static let info = Color.blue.opacity(0.9)
+        // Status colors - minimal but clear
+        static let success = Color.green
+        static let warning = Color.orange
+        static let error = Color.red
+        static let info = Color.blue
         
-        // iA Writer inspired surface colors
-        static let cardSurface = Color("SecondaryBackgroundColor")
-        static let cardShadow = Color.black.opacity(0.03)
-        static let divider = Color("TextTertiaryColor").opacity(0.2)
-        static let highlightBackground = Color("AppPrimaryColor").opacity(0.05)
+        // Simplified surface colors
+        static let cardSurface = Color.white
+        static let cardShadow = Color.black.opacity(0.05)
+        static let divider = Color(UIColor.systemGray5)
+        static let highlightBackground = Color.blue.opacity(0.1)
+        
+        // Focus mode
+        static let focusBackground = Color(white: 0.98)
     }
     
     // MARK: - Dimensions
     struct Dimensions {
-        // More generous spacing for a cleaner look
-        static let cornerRadius: CGFloat = 8 // Less rounded for a cleaner look
-        static let smallCornerRadius: CGFloat = 4
-        static let iconSize: CGFloat = 24
-        static let smallIconSize: CGFloat = 16
-        static let largeIconSize: CGFloat = 32
+        // Minimal spacing for a cleaner look
+        static let cornerRadius: CGFloat = 4 // Much less rounded corners
+        static let smallCornerRadius: CGFloat = 2
+        static let iconSize: CGFloat = 20 // Smaller icons
+        static let smallIconSize: CGFloat = 14
+        static let largeIconSize: CGFloat = 28
         
-        // Increased spacing for better content breathing room
-        static let spacing: CGFloat = 20
-        static let smallSpacing: CGFloat = 12
-        static let tinySpacing: CGFloat = 6
-        static let largeSpacing: CGFloat = 32
+        // Consistent spacing
+        static let spacing: CGFloat = 16
+        static let smallSpacing: CGFloat = 8
+        static let tinySpacing: CGFloat = 4
+        static let largeSpacing: CGFloat = 24
         
-        // Same interaction sizes
-        static let buttonHeight: CGFloat = 48
+        // Touch targets
+        static let buttonHeight: CGFloat = 44
         static let minTouchSize: CGFloat = 44
         
-        // New dimensions for typography
-        static let lineHeight: CGFloat = 1.5
-        static let paragraphSpacing: CGFloat = 8
-        static let cardElevation: CGFloat = 2 // Subtle elevation
+        // Typography measurements
+        static let lineHeight: CGFloat = 1.6 // Increased line height like iA Writer
+        static let paragraphSpacing: CGFloat = 10
+        static let cardElevation: CGFloat = 1 // Very subtle elevation
     }
     
     // MARK: - Typography
     struct Typography {
-        // More refined typography with SF Mono options for code/writing
-        static let largeTitle = Font.largeTitle.weight(.bold)
-        static let title = Font.title.weight(.medium) // Less heavy weight
-        static let headline = Font.headline.weight(.medium)
-        static let subheadline = Font.subheadline
-        static let body = Font.body
-        static let callout = Font.callout
-        static let footnote = Font.footnote
-        static let caption = Font.caption
+        // iA Writer inspired typography - focused on monospaced
+        static func largeTitle() -> Font {
+            return Font.system(size: 28, weight: .bold)
+        }
         
-        // iA Writer inspired typography
-        static let editor = Font.system(size: 16).monospaced() // Monospaced for focus
-        static let editorHeadline = Font.system(size: 18).weight(.medium).monospaced()
-        static let mono = Font.system(size: 14).monospaced()
+        static func title() -> Font {
+            return Font.system(size: 22, weight: .medium)
+        }
+        
+        static func headline() -> Font {
+            return Font.system(size: 17, weight: .semibold)
+        }
+        
+        static func subheadline() -> Font {
+            return Font.system(size: 15, weight: .regular)
+        }
+        
+        // Core typography - monospaced for content
+        static func body() -> Font {
+            return Font.system(size: 16)
+        }
+        
+        static func bodyMono() -> Font {
+            return Font.monospaced(Font.system(size: 16))()
+        }
+        
+        static func caption() -> Font {
+            return Font.system(size: 13)
+        }
+        
+        // Editor typography - fully monospaced
+        static func editor() -> Font {
+            return Font.monospaced(Font.system(size: 16))()
+        }
+        
+        static func editorHeadline() -> Font {
+            return Font.monospaced(Font.system(size: 18, weight: .medium))()
+        }
+        
+        static func editorTitle() -> Font {
+            return Font.monospaced(Font.system(size: 22, weight: .bold))()
+        }
     }
     
     // MARK: - Animation
     struct Animation {
-        // More subtle animations
-        static let standard = SwiftUI.Animation.easeOut(duration: 0.25)
-        static let quick = SwiftUI.Animation.easeOut(duration: 0.15)
-        static let slow = SwiftUI.Animation.easeOut(duration: 0.4)
-        static let springy = SwiftUI.Animation.spring(response: 0.3, dampingFraction: 0.8)
+        // Subtle, quick animations
+        static let standard = SwiftUI.Animation.easeOut(duration: 0.2)
+        static let quick = SwiftUI.Animation.easeOut(duration: 0.1)
+        static let slow = SwiftUI.Animation.easeOut(duration: 0.3)
         
-        // New subtle animations
-        static let fade = SwiftUI.Animation.easeInOut(duration: 0.2)
-        static let subtle = SwiftUI.Animation.easeInOut(duration: 0.3)
+        // Content transitions
+        static let fade = SwiftUI.Animation.easeInOut(duration: 0.15)
     }
 }
 
 // MARK: - View Extensions
 extension View {
-    // Cleaner card style with subtle elevation
+    // Clean, minimal card style
     func cardStyle() -> some View {
         self
             .padding(AppTheme.Dimensions.spacing)
             .background(AppTheme.Colors.cardSurface)
             .cornerRadius(AppTheme.Dimensions.cornerRadius)
             .shadow(color: AppTheme.Colors.cardShadow, 
-                    radius: AppTheme.Dimensions.cardElevation, 
+                    radius: 1, 
                     x: 0, 
-                    y: AppTheme.Dimensions.cardElevation/2)
+                    y: 1)
     }
     
-    // More refined button style
-    func primaryButtonStyle() -> some View {
+    // iA Writer-style content container
+    func contentContainer() -> some View {
         self
+            .padding(.horizontal, AppTheme.Dimensions.spacing)
+            .padding(.vertical, AppTheme.Dimensions.smallSpacing)
+            .background(AppTheme.Colors.background)
+    }
+    
+    // Minimal button style
+    func minimalButtonStyle() -> some View {
+        self
+            .font(AppTheme.Typography.body())
+            .foregroundColor(AppTheme.Colors.accent)
             .padding(.vertical, AppTheme.Dimensions.smallSpacing)
             .padding(.horizontal, AppTheme.Dimensions.spacing)
-            .background(AppTheme.Colors.primary)
-            .foregroundColor(.white)
-            .cornerRadius(AppTheme.Dimensions.smallCornerRadius)
     }
     
-    // New writer-focused styles
-    func editorStyle() -> some View {
+    // Focus mode style
+    func focusModeStyle() -> some View {
         self
-            .font(AppTheme.Typography.editor)
-            .lineSpacing(4)
             .padding(AppTheme.Dimensions.spacing)
-            .background(AppTheme.Colors.background)
+            .background(AppTheme.Colors.focusBackground)
+            .cornerRadius(0) // No corner radius for the clean iA Writer look
     }
     
-    // Focus mode style for current paragraph
-    func focusModeHighlight() -> some View {
+    // Text field style
+    func iaTextFieldStyle() -> some View {
         self
-            .padding(AppTheme.Dimensions.smallSpacing)
-            .background(AppTheme.Colors.highlightBackground)
-            .cornerRadius(AppTheme.Dimensions.smallCornerRadius)
-    }
-    
-    // Minimalist input field style
-    func minimalTextField() -> some View {
-        self
+            .font(AppTheme.Typography.bodyMono())
             .padding(AppTheme.Dimensions.smallSpacing)
             .background(AppTheme.Colors.background)
-            .cornerRadius(AppTheme.Dimensions.smallCornerRadius)
+            .cornerRadius(0) // No rounding
             .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Dimensions.smallCornerRadius)
-                    .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundColor(AppTheme.Colors.divider),
+                alignment: .bottom
             )
     }
 }

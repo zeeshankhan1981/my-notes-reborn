@@ -9,7 +9,7 @@ struct TagSelectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Tags")
-                    .font(AppTheme.Typography.headline)
+                    .font(AppTheme.Typography.caption())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                 
                 Spacer()
@@ -18,7 +18,7 @@ struct TagSelectorView: View {
                     showingTagManagement = true
                 }) {
                     Label("Manage Tags", systemImage: "gear")
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                 }
                 .sheet(isPresented: $showingTagManagement) {
                     TagManagementView()
@@ -53,7 +53,7 @@ struct TagSelectorView: View {
             if !selectedTagIDs.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Selected Tags")
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                     
                     FlowLayout(spacing: 4) {
@@ -84,7 +84,7 @@ struct TagView: View {
     
     var body: some View {
         Text(tag.name)
-            .font(AppTheme.Typography.footnote)
+            .font(AppTheme.Typography.caption())
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
@@ -98,44 +98,11 @@ struct TagView: View {
     }
 }
 
-struct SelectedTagView: View {
-    let tag: Tag
-    let onRemove: () -> Void
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(tag.color)
-                .frame(width: 8, height: 8)
-            
-            Text(tag.name)
-                .font(AppTheme.Typography.caption)
-            
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(AppTheme.Colors.textTertiary)
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.smallCornerRadius)
-                .fill(tag.color.opacity(0.15))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.smallCornerRadius)
-                .stroke(tag.color.opacity(0.3), lineWidth: 0.5)
-        )
-    }
-}
-
-// FlowLayout is a helper view that arranges its children in a wrapping flow layout
 struct FlowLayout: Layout {
     var spacing: CGFloat = 10
     
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? 0
+        let availableWidth = proposal.width ?? .infinity
         
         var height: CGFloat = 0
         var x: CGFloat = 0
@@ -145,7 +112,7 @@ struct FlowLayout: Layout {
         for view in subviews {
             let viewSize = view.sizeThatFits(.unspecified)
             
-            if x + viewSize.width > width {
+            if x + viewSize.width > availableWidth {
                 // Move to next row
                 y += maxHeight + spacing
                 x = 0
@@ -159,11 +126,11 @@ struct FlowLayout: Layout {
             height = max(height, y + maxHeight)
         }
         
-        return CGSize(width: width, height: height)
+        return CGSize(width: availableWidth, height: height)
     }
     
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let width = bounds.width
+        let availableWidth = bounds.width
         
         var x = bounds.minX
         var y = bounds.minY

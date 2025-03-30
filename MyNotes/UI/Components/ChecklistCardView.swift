@@ -50,7 +50,7 @@ struct ChecklistCardView: View {
                     }
                     
                     Text(checklist.title)
-                        .font(AppTheme.Typography.headline)
+                        .font(AppTheme.Typography.headline())
                         .fontWeight(.medium)
                         .foregroundColor(AppTheme.Colors.textPrimary)
                         .lineLimit(1)
@@ -79,7 +79,7 @@ struct ChecklistCardView: View {
                                 .font(.system(size: 14))
                             
                             Text(item.text)
-                                .font(AppTheme.Typography.footnote)
+                                .font(AppTheme.Typography.caption())
                                 .foregroundColor(item.isDone ? AppTheme.Colors.textTertiary : AppTheme.Colors.textSecondary)
                                 .strikethrough(item.isDone)
                                 .lineLimit(1)
@@ -88,7 +88,7 @@ struct ChecklistCardView: View {
                     
                     if checklist.items.count > 3 {
                         Text("+ \(checklist.items.count - 3) more items")
-                            .font(AppTheme.Typography.caption)
+                            .font(AppTheme.Typography.caption())
                             .foregroundColor(AppTheme.Colors.textTertiary)
                             .padding(.top, 2)
                     }
@@ -98,13 +98,13 @@ struct ChecklistCardView: View {
                 // Status and date
                 HStack {
                     Text("\(completedCount)/\(checklist.items.count) completed")
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                     
                     Spacer()
                     
                     Text(formattedDate)
-                        .font(AppTheme.Typography.caption)
+                        .font(AppTheme.Typography.caption())
                         .foregroundColor(AppTheme.Colors.textTertiary)
                 }
             }
