@@ -43,7 +43,6 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Core Data integration
   - Local data storage
   - Automatic backups
-  - iCloud sync across devices
 
 ## Installation
 
@@ -68,14 +67,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Version History
 
 ### v0.2.5 (2025-03-31)
-- Enhanced iCloud sync functionality:
-  - Real-time sync status indicator in navigation bar
-  - Minimalist popover menu for quick sync actions
-  - Detailed sync information screen with device list
-  - Offline mode support with pending changes tracking
-  - Improved error handling and user feedback
 - UI improvements:
-  - Clean, minimalist cloud sync icon design
+  - Clean, minimalist cloud icon design
   - Consistent placement in navigation bar
   - Smooth animations for popover transitions
   - Haptic feedback for better user experience
@@ -164,3 +157,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Core Data integration
 - Basic UI components
 - Folder management system
+
+Test

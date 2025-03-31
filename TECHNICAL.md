@@ -27,11 +27,6 @@ MyNotes follows a clean architecture pattern with the following main components:
 - `TagManagementView`: Tag creation and management
 - `TagSelectorView`: Tag selection interface
 - `TagFilterView`: Tag-based filtering interface
-- `CloudSyncStatusView`: Real-time sync status indication
-- `CloudSyncMonitor`: Tracks sync state
-- `CloudSyncInfoView`: User information and troubleshooting for iCloud sync
-- `iCloudHelpView`: Guides users through iCloud connection issues
-- `CloudSyncPopover`: Quick access to sync actions
 
 ## Core Data Implementation
 
@@ -93,16 +88,6 @@ The app uses Core Data for persistent storage with the following entities:
 - Efficient fetching with sort descriptors and predicates
 - Test data generation for development
 - Environment validation
-- CloudKit integration for iCloud sync
-- Background context optimization for sync operations
-
-### iCloud Integration
-- NSPersistentCloudKitContainer for seamless sync
-- Real-time sync status monitoring
-- iCloud account status verification
-- Notification handling for sync events
-- Automatic conflict resolution
-- Offline mode support with pending changes tracking
 
 ## SwiftUI Implementation
 
@@ -127,16 +112,13 @@ The app uses Core Data for persistent storage with the following entities:
 - Minimalist design inspired by iA Writer
 - Custom layout components
 - Reusable UI elements
-- Cloud sync status indicator with animations
-- Popover menu for quick sync actions
 
 ### Performance Optimizations
 - Lazy loading of content
 - Efficient list rendering
 - Optimized image handling
 - Memory management
-- Background context optimization for sync operations
-- Efficient CloudKit integration
+- Background context optimization
 
 ## Code Organization
 
@@ -147,7 +129,6 @@ MyNotes/
 ├── ViewModels/       # View models and business logic
 ├── Views/           # SwiftUI views
 ├── CoreData/         # Core Data implementation
-├── iCloud/           # iCloud integration
 └── Assets.xcassets/ # App assets
 ```
 
@@ -157,51 +138,9 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
-## Recent Changes (v0.2.5)
-
-### iCloud Sync Implementation
-- Enhanced CloudKit integration:
-  - Updated PersistenceController to use NSPersistentCloudKitContainer
-  - Added CloudKit container configuration
-  - Implemented proper notification handling for sync events
-  - Added iCloud account status verification
-  - Optimized background context for sync operations
-  - Added offline mode support with pending changes tracking
-- Created UI components for sync status:
-  - CloudSyncStatusView for real-time sync status indication
-  - CloudSyncMonitor for tracking sync state
-  - CloudSyncInfoView for user information and troubleshooting
-  - iCloudHelpView for guiding users through connection issues
-  - CloudSyncPopover for quick access to sync actions
-- Added necessary entitlements for iCloud capabilities
-
-### UI Improvements
-- Cloud sync icon:
-  - Clean, minimalist design
-  - Consistent placement in navigation bar
-  - Animated sync status indicators
-  - Offline mode indicators
-- Popover menu:
-  - Quick access to sync actions
-  - Sync progress display
-  - Offline mode status
-  - Smooth animations and transitions
-- User experience:
-  - Haptic feedback for interactions
-  - Visual feedback for sync states
-  - Clear error messages
-  - Offline mode indicators
-
-### Performance Optimizations
-- Enhanced persistence controller with CloudKit optimizations
-- Improved background task handling for better performance
-- Added proper error handling for sync operations
-- Optimized notification observation for sync events
-- Efficient offline mode handling
-
 ## Recent Changes (v0.2.4)
 
-### UI/UX Improvements
+### UI Improvements
 - Simplified search interface:
   - Removed redundant floating search button from MainView
   - Maintained single search icon in toolbar for consistency
@@ -271,8 +210,6 @@ MyNotes/
 - Improved tag relationship handling
 - Enhanced error handling in model-to-CDNote conversion
 - Added proper UUID string conversion for Core Data queries
-
-### UI/UX Improvements
 - Moved checklist creation button to top-right toolbar for consistency
 - Fixed layout constraint warnings
 - Improved visual hierarchy and spacing
@@ -510,12 +447,6 @@ MyNotes/
 - Code review required
 
 ## Version History
-
-### v0.2.5 (2025-04-02)
-- Implemented iCloud sync functionality with CloudKit integration
-- Added UI components for sync status and troubleshooting
-- Enhanced persistence controller with CloudKit optimizations
-- Improved background task handling for better performance
 
 ### v0.2.4 (2025-04-01)
 - Simplified search interface:
