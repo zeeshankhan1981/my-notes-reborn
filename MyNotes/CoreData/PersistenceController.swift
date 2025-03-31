@@ -23,6 +23,15 @@ struct PersistenceController {
         if let description = container.persistentStoreDescriptions.first {
             description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
             description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            
+            // Performance optimizations
+            // Use SQLite WAL mode for better concurrency
+            let options = [
+                NSPersistentStoreConnectionPoolMaxSizeKey: NSNumber(integerLiteral: 10),
+                NSSQLitePragmasOption: ["journal_mode": "WAL"],
+                NSSQLiteAnalyzeOption: true
+            ]
+            description.setOption(options as NSDictionary, forKey: NSSQLiteStoreTypeOption)
         }
         
         container.loadPersistentStores { description, error in
@@ -39,6 +48,10 @@ struct PersistenceController {
         
         // Optimize for UI responsiveness
         container.viewContext.automaticallyMergesChangesFromParent = true
+        
+        // Add performance tuning for batch fetches
+        container.viewContext.shouldRefreshRefetchedObjects = false
+        container.viewContext.stalenessInterval = 0.5
     }
     
     // For saving context when needed
@@ -78,6 +91,36 @@ struct PersistenceController {
             #if DEBUG
             assertionFailure("Unresolved error \(nsError), \(nsError.userInfo)")
             #endif
+        }
+    }
+    
+    // Create a fetch request with optimization settings
+    func optimizedFetchRequest<T: NSManagedObject>(_ request: NSFetchRequest<T>) -> NSFetchRequest<T> {
+        // Clone the request to avoid modifying the original
+        let optimizedRequest = request.copy() as! NSFetchRequest<T>
+        
+        // Set batch size for better memory usage with large result sets
+        optimizedRequest.fetchBatchSize = 20
+        
+        // Only fetch the properties we need
+        if optimizedRequest.propertiesToFetch == nil {
+            // Keep existing properties if set
+            optimizedRequest.returnsObjectsAsFaults = false
+        }
+        
+        return optimizedRequest
+    }
+    
+    // Perform a fetch with optimized settings
+    func performOptimizedFetch<T: NSManagedObject>(_ request: NSFetchRequest<T>, in context: NSManagedObjectContext? = nil) -> [T] {
+        let context = context ?? container.viewContext
+        let optimizedRequest = optimizedFetchRequest(request)
+        
+        do {
+            return try context.fetch(optimizedRequest)
+        } catch {
+            print("Optimized fetch error: \(error)")
+            return []
         }
     }
     

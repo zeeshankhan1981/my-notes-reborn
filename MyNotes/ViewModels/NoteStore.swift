@@ -4,41 +4,63 @@ import Combine
 
 class NoteStore: ObservableObject {
     @Published var notes: [Note] = []
+    @Published var isLoading: Bool = false
     
     private let persistence = PersistenceController.shared
     private var cancellables = Set<AnyCancellable>()
     
     init() {
         print("NoteStore: Initializing")
-        loadNotes()
-        setupObservers()
         
-        // Add test data if store is empty
-        ensureTestData()
+        // Load data asynchronously to avoid UI blocking
+        Task {
+            await loadNotesAsync()
+            setupObservers()
+            ensureTestData()
+        }
     }
     
     private func setupObservers() {
         print("NoteStore: Setting up Core Data observers")
         // Listen for context save notifications to reload data
         NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)
+            .debounce(for: .milliseconds(300), scheduler: RunLoop.main) // Debounce to avoid rapid reloads
             .sink { [weak self] _ in
                 print("NoteStore: Core Data context saved, reloading notes")
-                self?.loadNotes()
+                Task { 
+                    await self?.loadNotesAsync()
+                }
             }
             .store(in: &cancellables)
     }
     
-    func loadNotes() {
-        print("NoteStore: Loading notes from Core Data")
+    // Asynchronous loading to avoid blocking the UI
+    @MainActor
+    func loadNotesAsync() async {
+        print("NoteStore: Loading notes from Core Data asynchronously")
+        isLoading = true
+        
         let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \CDNote.date, ascending: false)]
         
-        do {
-            let cdNotes = try persistence.container.viewContext.fetch(request)
-            self.notes = cdNotes.map { $0.toDomainModel() }
-            print("NoteStore: Successfully loaded \(self.notes.count) notes")
-        } catch {
-            print("NoteStore: Error fetching notes: \(error)")
+        // Load on background thread
+        let loadedNotes = await Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self = self else { return [] }
+            
+            let cdNotes = self.persistence.performOptimizedFetch(request)
+            return cdNotes.map { $0.toDomainModel() }
+        }.value
+        
+        // Update on main thread
+        self.notes = loadedNotes
+        isLoading = false
+        print("NoteStore: Successfully loaded \(self.notes.count) notes")
+    }
+    
+    // The original sync loading method (kept for compatibility)
+    func loadNotes() {
+        Task {
+            await loadNotesAsync()
         }
     }
     

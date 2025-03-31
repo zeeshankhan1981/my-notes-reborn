@@ -111,90 +111,23 @@ struct NoteListView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
-                if showingTagFilter {
-                    TagFilterView(selectedTagIds: $selectedTagIDs)
-                        .padding(.horizontal)
-                        .padding(.top, showingTagFilter ? 8 : 0)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-
-                if filteredNotes.isEmpty {
-                    emptyStateView
-                } else {
-                    List {
-                        // Pinned notes
-                        if !pinnedNotes.isEmpty {
-                            Section(header: 
-                                Text("Pinned")
-                                    .font(AppTheme.Typography.headline())
-                                    .foregroundColor(AppTheme.Colors.textSecondary)
-                            ) {
-                                ForEach(pinnedNotes) { note in
-                                    noteCardView(for: note)
-                                        .listRowSeparator(.hidden)
-                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                        .listRowBackground(Color.clear)
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                            Button(role: .destructive) {
-                                                let generator = UINotificationFeedbackGenerator()
-                                                generator.notificationOccurred(.warning)
-                                                noteStore.delete(note: note)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-                                        }
-                                        .swipeActions(edge: .leading) {
-                                            Button {
-                                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                                generator.impactOccurred()
-                                                noteStore.togglePin(note: note)
-                                            } label: {
-                                                Label("Unpin", systemImage: "pin.slash")
-                                            }
-                                            .tint(AppTheme.Colors.primary)
-                                        }
-                                }
-                            }
-                        }
-                        
-                        // Unpinned notes
-                        Section(header: 
-                            !pinnedNotes.isEmpty ?
-                                Text("Notes")
-                                    .font(AppTheme.Typography.headline())
-                                    .foregroundColor(AppTheme.Colors.textSecondary)
-                            : nil
-                        ) {
-                            ForEach(unpinnedNotes) { note in
-                                noteCardView(for: note)
-                                    .listRowSeparator(.hidden)
-                                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            let generator = UINotificationFeedbackGenerator()
-                                            generator.notificationOccurred(.warning)
-                                            noteStore.delete(note: note)
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
-                                    .swipeActions(edge: .leading) {
-                                        Button {
-                                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                                            generator.impactOccurred()
-                                            noteStore.togglePin(note: note)
-                                        } label: {
-                                            Label("Pin", systemImage: "pin.fill")
-                                        }
-                                        .tint(AppTheme.Colors.primary)
-                                    }
-                            }
-                        }
+                // Main content with loading state
+                ZStack {
+                    if noteStore.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(1.2)
+                            .padding()
+                    } else if filteredNotes.isEmpty {
+                        emptyStateView
+                            .transition(.opacity)
+                    } else {
+                        noteListContent
+                            .transition(.opacity)
                     }
-                    .listStyle(.inset)
-                    .scrollContentBackground(.hidden)
                 }
+                .animation(.spring(response: 0.3), value: noteStore.isLoading)
+                .animation(.spring(response: 0.3), value: filteredNotes.isEmpty)
             }
         }
         .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
@@ -204,63 +137,58 @@ struct NoteListView: View {
                         noteStore.delete(note: noteToDelete)
                     }
                 }
-                selectedNotes.removeAll()
+                
+                // Exit selection mode
                 isSelectionMode = false
+                selectedNotes.removeAll()
             }
+            
             Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action cannot be undone.")
         }
     }
     
-    private var selectionToolbar: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Cancel") {
-                    withAnimation {
-                        isSelectionMode = false
-                        selectedNotes.removeAll()
+    // Extract note list content to optimize rendering
+    private var noteListContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                // Add tag filter bar at the top if tags are selected
+                if !selectedTagIDs.isEmpty {
+                    tagFilterBar
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                }
+                
+                // Pinned notes section
+                if !pinnedNotes.isEmpty {
+                    SectionHeaderView(title: "Pinned", iconName: "pin.fill")
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                    
+                    ForEach(pinnedNotes) { note in
+                        noteCardView(for: note)
+                            .padding(.horizontal)
                     }
                 }
-                .foregroundColor(AppTheme.Colors.primary)
                 
-                Spacer()
-                
-                Text("\(selectedNotes.count) selected")
-                    .font(AppTheme.Typography.body())
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-                
-                Spacer()
-                
-                Button("Select All") {
-                    withAnimation {
-                        selectedNotes = Set(filteredNotes.map { $0.id })
+                // Unpinned notes section
+                if !unpinnedNotes.isEmpty {
+                    if !pinnedNotes.isEmpty {
+                        SectionHeaderView(title: "Notes", iconName: "note.text")
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                    }
+                    
+                    ForEach(unpinnedNotes) { note in
+                        noteCardView(for: note)
+                            .padding(.horizontal)
                     }
                 }
-                .foregroundColor(AppTheme.Colors.primary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-            
-            if !selectedNotes.isEmpty {
-                Button(action: {
-                    isShowingDeleteConfirmation = true
-                }) {
-                    HStack {
-                        Image(systemName: "trash")
-                        Text("Delete Selected")
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.red)
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                }
+                
+                // Add some spacing at the bottom
+                Spacer(minLength: 60)
             }
         }
-        .background(AppTheme.Colors.secondaryBackground)
-        .transition(.move(edge: .top).combined(with: .opacity))
+        .scrollDismissesKeyboard(.immediately)
     }
     
     private var searchBar: some View {
@@ -498,5 +426,55 @@ struct NoteListView: View {
         withAnimation {
             isSelectionMode = false
         }
+    }
+    
+    private var selectionToolbar: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") {
+                    withAnimation {
+                        isSelectionMode = false
+                        selectedNotes.removeAll()
+                    }
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+                
+                Spacer()
+                
+                Text("\(selectedNotes.count) selected")
+                    .font(AppTheme.Typography.body())
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Button("Select All") {
+                    withAnimation {
+                        selectedNotes = Set(filteredNotes.map { $0.id })
+                    }
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            
+            if !selectedNotes.isEmpty {
+                Button(action: {
+                    isShowingDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Delete Selected")
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.red)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                }
+            }
+        }
+        .background(AppTheme.Colors.secondaryBackground)
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
