@@ -63,11 +63,15 @@ struct ChecklistEditorView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                saveButton
+                SaveButton {
+                    saveChecklist()
+                }
             }
             
             ToolbarItem(placement: .navigationBarLeading) {
-                cancelButton
+                CancelButton {
+                    dismiss()
+                }
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -90,16 +94,49 @@ struct ChecklistEditorView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingL) {
                 // Title field
-                titleFieldSection
+                FormFieldView(label: "Title", iconName: "textformat") {
+                    TextField("Checklist title", text: $title)
+                        .font(AppTheme.Typography.title3())
+                }
                 
                 // Checklist items
-                checklistItemsSection
+                FormFieldView(label: "Items", iconName: "checklist") {
+                    VStack(spacing: AppTheme.Dimensions.spacingS) {
+                        // Existing items
+                        if items.isEmpty {
+                            emptyItemsPlaceholder
+                                .padding(.vertical, 8)
+                        } else {
+                            ForEach(items.indices, id: \.self) { index in
+                                ChecklistItemRow(
+                                    item: binding(for: items[index]),
+                                    focusedField: $focusedField,
+                                    onDelete: { deleteItem(item: items[index]) }
+                                )
+                                .padding(.vertical, 2)
+                                .transition(.opacity)
+                            }
+                        }
+                        
+                        // Add new item section
+                        addNewItemSection
+                            .padding(.top, 8)
+                    }
+                }
                 
                 // Folder selection
-                folderSelectionSection
+                FormFieldView(label: "Folder", iconName: "folder") {
+                    folderSelector
+                }
                 
                 // Tag selection
-                tagSelectionSection
+                FormFieldView(label: "Tags", iconName: "tag") {
+                    TagFilterView(selectedTagIds: Binding(
+                        get: { Set(tagIDs) },
+                        set: { tagIDs = Array($0) }
+                    ))
+                    .padding(4)
+                }
             }
             .padding(.vertical, AppTheme.Dimensions.spacingL)
         }
@@ -361,22 +398,6 @@ struct ChecklistEditorView: View {
         Label("Tags", systemImage: "tag")
             .font(AppTheme.Typography.headline())
             .foregroundColor(AppTheme.Colors.textSecondary)
-    }
-    
-    // MARK: - Toolbar Components
-    
-    private var saveButton: some View {
-        Button("Save") {
-            saveChecklist()
-        }
-        .buttonStyle(FilledButtonStyle())
-    }
-    
-    private var cancelButton: some View {
-        Button("Cancel") {
-            dismiss()
-        }
-        .buttonStyle(OutlinedButtonStyle())
     }
     
     // MARK: - Supporting Views

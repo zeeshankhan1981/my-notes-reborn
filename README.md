@@ -65,6 +65,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
+### v0.2.2 (2025-03-31)
+- Implemented UI consistency across Note and Checklist editors
+- Created standardized button styles for navigation actions
+- Added consistent form field styling with icons
+- Improved visual hierarchy and spacing
+- Fixed build error with missing isRichTextEditorAvailable() function
+- Enhanced navigation bar consistency
+
 ### v0.2.1 (2025-03-30)
 - Implemented robust search functionality across the app
 - Added unified global search capabilities

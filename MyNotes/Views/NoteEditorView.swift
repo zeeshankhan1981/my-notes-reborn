@@ -100,17 +100,8 @@ struct NoteEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                if mode == .edit {
-                    Button("Done") {
-                        saveNote()
-                        dismiss()
-                    }
-                    .foregroundColor(AppTheme.Colors.accent)
-                } else {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(AppTheme.Colors.textSecondary)
+                CancelButton {
+                    dismiss()
                 }
             }
             
@@ -121,11 +112,10 @@ struct NoteEditorView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
+                SaveButton {
                     saveNote()
                     dismiss()
                 }
-                .foregroundColor(AppTheme.Colors.accent)
             }
         }
     }
@@ -133,244 +123,164 @@ struct NoteEditorView: View {
     // Main editor content
     private var editorContent: some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(spacing: AppTheme.Dimensions.spacingL) {
                 // Title field
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("TITLE")
-                        .font(AppTheme.Typography.caption())
-                        .foregroundColor(AppTheme.Colors.textSecondary)
-                        .padding(.horizontal, AppTheme.Dimensions.spacing)
-                        .padding(.top, AppTheme.Dimensions.spacing)
-                        .padding(.bottom, AppTheme.Dimensions.tinySpacing)
-                    
-                    TextField("Untitled", text: $title)
-                        .font(AppTheme.Typography.editorTitle())
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                        .padding(.horizontal, AppTheme.Dimensions.spacing)
-                        .padding(.bottom, AppTheme.Dimensions.smallSpacing)
+                FormFieldView(label: "Title", iconName: "textformat") {
+                    TextField("Note title", text: $title)
+                        .font(AppTheme.Typography.title3())
                 }
                 
-                Divider()
-                    .background(AppTheme.Colors.divider)
-                
-                // Content section
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Text("CONTENT")
-                            .font(AppTheme.Typography.caption())
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                        
-                        Spacer()
-                        
-                        HStack(spacing: AppTheme.Dimensions.smallSpacing) {
-                            // Focus mode button
-                            Button(action: {
-                                withAnimation {
-                                    isFocusMode = true
+                // Content field
+                FormFieldView(label: "Content", iconName: "text.justify") {
+                    VStack(alignment: .trailing, spacing: AppTheme.Dimensions.smallSpacing) {
+                        if isRichTextEditorAvailable() {
+                            RichTextEditor(
+                                text: $attributedContent,
+                                placeholder: "Type your note content here...",
+                                onTextChange: { newText in
+                                    attributedContent = newText
+                                    content = newText.string
                                 }
-                            }) {
-                                Image(systemName: "rectangle.expand.vertical")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(AppTheme.Colors.textSecondary)
-                            }
-                            
-                            // Formatting button
-                            Button(action: {
-                                withAnimation {
-                                    isShowingFormatting.toggle()
-                                }
-                            }) {
-                                Image(systemName: isShowingFormatting ? "textformat.alt" : "textformat")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(isFocusMode ? AppTheme.Colors.textTertiary : 
-                                                    (isShowingFormatting ? AppTheme.Colors.accent : AppTheme.Colors.textSecondary))
-                            }
+                            )
+                            .frame(minHeight: 200)
+                            .padding(.horizontal, AppTheme.Dimensions.spacing)
+                        } else {
+                            TextField("Note content", text: $content)
+                                .font(AppTheme.Typography.body())
+                                .padding(.horizontal, AppTheme.Dimensions.spacing)
                         }
-                    }
-                    .padding(.horizontal, AppTheme.Dimensions.spacing)
-                    .padding(.top, AppTheme.Dimensions.spacing)
-                    .padding(.bottom, AppTheme.Dimensions.tinySpacing)
-                    
-                    // Rich text formatting toolbar (minimalist style)
-                    if isShowingFormatting {
-                        HStack(spacing: AppTheme.Dimensions.spacing) {
-                            FormatButton(icon: "bold", action: {
-                                applyFormatting(.bold)
-                            })
-                            
-                            FormatButton(icon: "italic", action: {
-                                applyFormatting(.italic)
-                            })
-                            
-                            FormatButton(icon: "underline", action: {
-                                applyFormatting(.underline)
-                            })
-                            
-                            Divider()
-                                .frame(height: 16)
-                            
-                            FormatButton(icon: "paintpalette", action: {
-                                applyFormatting(.textColor(.blue))
-                            })
-                            
-                            FormatButton(icon: "link", action: {
-                                let url = URL(string: "https://example.com")!
-                                applyFormatting(.insertLink(url, "Link"))
-                            })
-                            
+                        
+                        HStack {
                             Spacer()
+                            
+                            if !isFocusMode {
+                                Button {
+                                    withAnimation {
+                                        isShowingFormatting.toggle()
+                                    }
+                                } label: {
+                                    Label("Format", systemImage: "textformat")
+                                        .font(AppTheme.Typography.caption())
+                                        .foregroundColor(AppTheme.Colors.textSecondary)
+                                }
+                                .buttonStyle(PressableButtonStyle())
+                            }
+                            
+                            Button {
+                                withAnimation {
+                                    isFocusMode.toggle()
+                                }
+                            } label: {
+                                Label(
+                                    isFocusMode ? "Exit Focus" : "Focus Mode",
+                                    systemImage: isFocusMode ? "eye" : "eye.slash"
+                                )
+                                .font(AppTheme.Typography.caption())
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                            }
+                            .buttonStyle(PressableButtonStyle())
                         }
-                        .padding(.horizontal, AppTheme.Dimensions.spacing)
-                        .padding(.vertical, AppTheme.Dimensions.smallSpacing)
-                        .foregroundColor(AppTheme.Colors.textSecondary)
-                        .transition(.move(edge: .top).combined(with: .opacity))
                     }
-                    
-                    // Rich Text Editor (monospaced, iA Writer style)
-                    RichTextEditor(
-                        text: $attributedContent,
-                        placeholder: "Type your note content here...",
-                        onTextChange: { newText in
-                            attributedContent = newText
-                            content = newText.string
+                }
+                
+                // Image field
+                FormFieldView(label: "Image", iconName: "photo") {
+                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
+                        if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 200)
+                                .frame(maxWidth: .infinity)
+                                .overlay(
+                                    Button(action: {
+                                        withAnimation {
+                                            self.imageData = nil
+                                            self.selectedItem = nil
+                                        }
+                                    }) {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.white)
+                                            .background(Circle().fill(Color.black.opacity(0.7)))
+                                            .padding(8)
+                                    }, alignment: .topTrailing
+                                )
+                                .padding(.horizontal, AppTheme.Dimensions.spacing)
+                        } else {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                HStack {
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(AppTheme.Colors.textTertiary)
+                                    
+                                    Text("Add Image")
+                                        .font(AppTheme.Typography.body())
+                                        .foregroundColor(AppTheme.Colors.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(AppTheme.Dimensions.smallSpacing)
+                                .overlay(
+                                    Rectangle()
+                                        .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                                )
+                                .padding(.horizontal, AppTheme.Dimensions.spacing)
+                            }
                         }
-                    )
-                    .frame(minHeight: 200)
+                    }
+                    .onChange(of: selectedItem) { newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                imageData = data
+                            }
+                        }
+                    }
+                }
+                
+                // Folder field
+                FormFieldView(label: "Folder", iconName: "folder") {
+                    Menu {
+                        Button("None") {
+                            selectedFolderID = nil
+                        }
+                        
+                        Divider()
+                        
+                        ForEach(folderStore.folders) { folder in
+                            Button(folder.name) {
+                                selectedFolderID = folder.id
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(selectedFolderName)
+                                .font(AppTheme.Typography.body())
+                                .foregroundColor(AppTheme.Colors.textPrimary)
+                            Spacer()
+                            Image(systemName: "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                        .padding(AppTheme.Dimensions.smallSpacing)
+                        .overlay(
+                            Rectangle()
+                                .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                        )
+                        .padding(.horizontal, AppTheme.Dimensions.spacing)
+                    }
+                }
+                
+                // Tags field
+                FormFieldView(label: "Tags", iconName: "tag") {
+                    TagFilterView(selectedTagIds: Binding(
+                        get: { Set(tagIDs) },
+                        set: { tagIDs = Array($0) }
+                    ))
                     .padding(.horizontal, AppTheme.Dimensions.spacing)
                 }
-                
-                Divider()
-                    .background(AppTheme.Colors.divider)
-                
-                // Metadata section
-                VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacing) {
-                    // Image section
-                    imageSection
-                    
-                    // Folder selection
-                    folderSection
-                    
-                    // Tags section
-                    tagSection
-                }
-                .padding(.vertical, AppTheme.Dimensions.spacing)
             }
+            .padding(.vertical, AppTheme.Dimensions.spacingL)
         }
         .background(AppTheme.Colors.background)
-    }
-    
-    // Image section
-    private var imageSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            Text("IMAGE")
-                .font(AppTheme.Typography.caption())
-                .foregroundColor(AppTheme.Colors.textSecondary)
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-            
-            if let imageData = imageData, let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 200)
-                    .frame(maxWidth: .infinity)
-                    .overlay(
-                        Button(action: {
-                            withAnimation {
-                                self.imageData = nil
-                                self.selectedItem = nil
-                            }
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.white)
-                                .background(Circle().fill(Color.black.opacity(0.7)))
-                                .padding(8)
-                        }, alignment: .topTrailing
-                    )
-                    .padding(.horizontal, AppTheme.Dimensions.spacing)
-            } else {
-                PhotosPicker(selection: $selectedItem, matching: .images) {
-                    HStack {
-                        Image(systemName: "photo")
-                            .font(.system(size: 20))
-                            .foregroundColor(AppTheme.Colors.textTertiary)
-                        
-                        Text("Add Image")
-                            .font(AppTheme.Typography.body())
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(AppTheme.Dimensions.smallSpacing)
-                    .overlay(
-                        Rectangle()
-                            .stroke(AppTheme.Colors.divider, lineWidth: 1)
-                    )
-                    .padding(.horizontal, AppTheme.Dimensions.spacing)
-                }
-            }
-        }
-        .onChange(of: selectedItem) { newItem in
-            Task {
-                if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                    imageData = data
-                }
-            }
-        }
-    }
-    
-    // Folder section
-    private var folderSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            Text("FOLDER")
-                .font(AppTheme.Typography.caption())
-                .foregroundColor(AppTheme.Colors.textSecondary)
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-            
-            Menu {
-                Button("None") {
-                    selectedFolderID = nil
-                }
-                
-                Divider()
-                
-                ForEach(folderStore.folders) { folder in
-                    Button(folder.name) {
-                        selectedFolderID = folder.id
-                    }
-                }
-            } label: {
-                HStack {
-                    Text(selectedFolderName)
-                        .font(AppTheme.Typography.body())
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.Colors.textSecondary)
-                }
-                .padding(AppTheme.Dimensions.smallSpacing)
-                .overlay(
-                    Rectangle()
-                        .stroke(AppTheme.Colors.divider, lineWidth: 1)
-                )
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-            }
-        }
-    }
-    
-    // Tags section
-    private var tagSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            Text("TAGS")
-                .font(AppTheme.Typography.caption())
-                .foregroundColor(AppTheme.Colors.textSecondary)
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-            
-            TagFilterView(selectedTagIds: Binding(
-                get: { Set(tagIDs) },
-                set: { tagIDs = Array($0) }
-            ))
-                .padding(.horizontal, AppTheme.Dimensions.spacing)
-        }
     }
     
     private var selectedFolderName: String {
@@ -379,6 +289,12 @@ struct NoteEditorView: View {
         } else {
             return "None"
         }
+    }
+    
+    private func isRichTextEditorAvailable() -> Bool {
+        // Currently always returning true as rich text editing is supported
+        // In the future, this could check for specific features or conditions
+        return true
     }
     
     private func applyFormatting(_ formatting: RichTextEditor.TextFormatting) {

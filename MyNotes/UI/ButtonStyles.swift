@@ -63,3 +63,62 @@ struct OutlinedButtonStyle: ButtonStyle {
             .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
+
+/// A button style for navigation bar actions
+struct NavigationButtonStyle: ButtonStyle {
+    var isPrimary: Bool = false
+    var isDestructive: Bool = false
+    var isDisabled: Bool = false
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 17, weight: isPrimary ? .semibold : .regular))
+            .foregroundColor(
+                isDisabled ? AppTheme.Colors.textTertiary :
+                isDestructive ? AppTheme.Colors.error :
+                isPrimary ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary
+            )
+            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+/// A standardized Save button for editor views
+struct SaveButton: View {
+    var action: () -> Void
+    var isDisabled: Bool = false
+    
+    var body: some View {
+        Button(action: {
+            let haptic = UIImpactFeedbackGenerator(style: .medium)
+            haptic.impactOccurred()
+            action()
+        }) {
+            Text("Save")
+                .font(.system(size: 17, weight: .semibold))
+        }
+        .buttonStyle(NavigationButtonStyle(isPrimary: true, isDisabled: isDisabled))
+        .disabled(isDisabled)
+    }
+}
+
+/// A standardized Cancel button for editor views
+struct CancelButton: View {
+    var action: () -> Void
+    
+    var body: some View {
+        Button(action: {
+            let haptic = UIImpactFeedbackGenerator(style: .light)
+            haptic.impactOccurred()
+            action()
+        }) {
+            Text("Cancel")
+                .font(.system(size: 17))
+        }
+        .buttonStyle(NavigationButtonStyle())
+    }
+}
