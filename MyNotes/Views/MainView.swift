@@ -5,6 +5,7 @@ struct MainView: View {
     @StateObject private var checklistStore = ChecklistStore()
     @StateObject private var folderStore = FolderStore()
     @StateObject private var tagStore = TagStore()
+    @State private var showingGlobalSearch = false
     
     init() {
         print("MainView initialized")
@@ -28,6 +29,20 @@ struct MainView: View {
         .environmentObject(checklistStore)
         .environmentObject(folderStore)
         .environmentObject(tagStore)
+        .sheet(isPresented: $showingGlobalSearch) {
+            GlobalSearchView()
+        }
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    globalSearchButton
+                        .padding(.trailing, 16)
+                        .padding(.bottom, 74) // Position above tab bar
+                }
+            }
+        )
         .onAppear {
             print("TabView appeared")
             
@@ -37,5 +52,29 @@ struct MainView: View {
             print("- AppSecondaryColor: \(AppTheme.Colors.secondary)")
             print("- SecondaryBackground: \(AppTheme.Colors.secondaryBackground)")
         }
+    }
+    
+    private var globalSearchButton: some View {
+        Button(action: {
+            showingGlobalSearch = true
+            
+            // Add haptic feedback
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+        }) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(16)
+                .background(AppTheme.Colors.primary)
+                .clipShape(Circle())
+                .shadow(
+                    color: AppTheme.Colors.cardShadow.opacity(0.3),
+                    radius: 5,
+                    x: 0,
+                    y: 3
+                )
+        }
+        .accessibilityLabel("Global Search")
     }
 }

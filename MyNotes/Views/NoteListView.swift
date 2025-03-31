@@ -195,24 +195,11 @@ struct NoteListView: View {
     }
     
     private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(AppTheme.Colors.textTertiary)
-            TextField("Search notes...", text: $searchText)
-                .font(AppTheme.Typography.body())
-            
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.Colors.textTertiary)
-                }
-            }
-        }
-        .padding(8)
-        .background(AppTheme.Colors.cardSurface)
-        .cornerRadius(8)
+        SearchBarView(
+            searchText: $searchText,
+            isSearching: $isShowingSearch,
+            placeholder: "Search notes..."
+        )
     }
     
     private var pinnedNotesSection: some View {
@@ -341,6 +328,22 @@ struct NoteListView: View {
                             .foregroundColor(AppTheme.Colors.primary)
                     }
                     .accessibilityLabel("Add Note")
+                    
+                    // Search button
+                    Button(action: {
+                        withAnimation(AppTheme.Animations.standardCurve) {
+                            isShowingSearch.toggle()
+                            if isShowingSearch == false {
+                                searchText = ""
+                            }
+                        }
+                    }) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.Colors.primary)
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                    .accessibilityLabel("Search")
                     
                     // Select button
                     Button(action: {

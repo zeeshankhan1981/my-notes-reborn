@@ -135,6 +135,24 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
+## Recent Changes (v0.2.1)
+
+### Search System Improvements
+- Created a unified search architecture:
+  - `SearchService`: Core service for managing search operations
+  - `SearchBarView`: Reusable UI component to maintain consistency
+  - `GlobalSearchView`: App-wide search implementation
+- Added proper search result handling with categorization
+- Fixed binding and type errors in search implementation
+- Enhanced store classes with item retrieval methods
+
+### UI/UX Enhancements
+- Consistent search experience across Notes and Checklists views
+- Added global search button in MainView
+- Implemented visual feedback for search actions
+- Created search result card design with proper visual hierarchy
+- Added animations and haptic feedback to improve user experience
+
 ## Recent Changes (v0.2.0)
 
 ### Core Data Improvements
@@ -386,6 +404,13 @@ MyNotes/
 - Code review required
 
 ## Version History
+
+### v0.2.1 (2025-03-30)
+- Implemented robust search functionality across the app
+- Added unified global search capabilities
+- Created consistent search UI between Notes and Checklists
+- Fixed UI component errors in search implementation
+- Enhanced store classes with proper item retrieval methods
 
 ### v0.2.0 (2025-04-01)
 - Fixed UUID casting issues in predicates

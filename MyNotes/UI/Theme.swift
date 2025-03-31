@@ -100,6 +100,10 @@ struct AppTheme {
             return Font.system(size: 22, weight: .medium)
         }
         
+        static func title2() -> Font {
+            return Font.system(size: 21, weight: .medium)
+        }
+        
         static func title3() -> Font {
             return Font.system(size: 20, weight: .medium)
         }

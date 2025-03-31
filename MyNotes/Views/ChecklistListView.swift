@@ -200,35 +200,10 @@ struct ChecklistListView: View {
     }
     
     private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(AppTheme.Colors.textTertiary)
-            
-            TextField("Search checklists...", text: $searchText)
-                .font(AppTheme.Typography.body())
-                .submitLabel(.search)
-            
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchText = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(AppTheme.Colors.textTertiary)
-                }
-                .transition(.scale.combined(with: .opacity))
-                .buttonStyle(PressableButtonStyle())
-            }
-        }
-        .padding(10)
-        .background(colorScheme == .dark ? 
-            AppTheme.Colors.cardSurface : 
-            AppTheme.Colors.secondaryBackground)
-        .cornerRadius(AppTheme.Dimensions.radiusM)
-        .shadow(
-            color: AppTheme.Colors.cardShadow.opacity(0.05),
-            radius: 2,
-            x: 0,
-            y: 1
+        SearchBarView(
+            searchText: $searchText,
+            isSearching: $isShowingSearch,
+            placeholder: "Search checklists..."
         )
     }
     

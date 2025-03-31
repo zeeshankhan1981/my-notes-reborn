@@ -33,8 +33,10 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
 
 - 🔍 Search Functionality
   - Full-text search across notes and checklists
-  - Tag-based filtering
-  - Real-time search results
+  - Consistent search UI in all views  
+  - Global search capability with unified results
+  - Real-time search with visual feedback
+  - Actionable search results with direct access to items
 
 - 💾 Data Persistence
   - Core Data integration
@@ -62,6 +64,13 @@ Feel free to submit issues and enhancement requests!
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Version History
+
+### v0.2.1 (2025-03-30)
+- Implemented robust search functionality across the app
+- Added unified global search capabilities
+- Created consistent search UI between Notes and Checklists
+- Fixed UI component errors in search implementation
+- Enhanced store classes with proper item retrieval methods
 
 ### v0.2.0 (2025-03-30)
 - Fixed UUID casting issues in Core Data predicates

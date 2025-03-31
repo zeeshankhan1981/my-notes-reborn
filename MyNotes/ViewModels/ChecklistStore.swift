@@ -156,6 +156,10 @@ class ChecklistStore: ObservableObject {
         loadChecklists()
     }
     
+    func getChecklist(id: UUID) -> ChecklistNote? {
+        return checklists.first { $0.id == id }
+    }
+
     private func saveContext() {
         persistence.save()
     }
