@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21754" systemVersion="22F82" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="CDChecklistItem" representedClassName="CDChecklistItem" syncable="YES" codeGenerationType="class">
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isDone" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="text" attributeType="String"/>
+        <relationship name="checklist" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDChecklistNote" inverseName="items" inverseEntity="CDChecklistNote"/>
+    </entity>
+    <entity name="CDChecklistNote" representedClassName="CDChecklistNote" syncable="YES" codeGenerationType="class">
+        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isPinned" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="title" attributeType="String"/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDFolder" inverseName="checklists" inverseEntity="CDFolder"/>
+        <relationship name="items" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CDChecklistItem" inverseName="checklist" inverseEntity="CDChecklistItem"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDTag" inverseName="checklists" inverseEntity="CDTag"/>
+    </entity>
+    <entity name="CDFolder" representedClassName="CDFolder" syncable="YES" codeGenerationType="class">
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String"/>
+        <relationship name="checklists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDChecklistNote" inverseName="folder" inverseEntity="CDChecklistNote"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDNote" inverseName="folder" inverseEntity="CDNote"/>
+    </entity>
+    <entity name="CDNote" representedClassName="CDNote" syncable="YES" codeGenerationType="class">
+        <attribute name="attributedContent" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="content" attributeType="String"/>
+        <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="isPinned" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="title" attributeType="String"/>
+        <relationship name="folder" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CDFolder" inverseName="notes" inverseEntity="CDFolder"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDTag" inverseName="notes" inverseEntity="CDTag"/>
+    </entity>
+    <entity name="CDTag" representedClassName="CDTag" syncable="YES" codeGenerationType="class">
+        <attribute name="color" optional="YES" attributeType="String"/>
+        <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" attributeType="String"/>
+        <relationship name="checklists" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDChecklistNote" inverseName="tags" inverseEntity="CDChecklistNote"/>
+        <relationship name="notes" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CDNote" inverseName="tags" inverseEntity="CDNote"/>
+    </entity>
+</model>
