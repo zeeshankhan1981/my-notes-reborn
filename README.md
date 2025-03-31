@@ -44,6 +44,16 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Local data storage
   - Automatic backups
 
+## Development Status
+
+The app is currently in active development. Key features are implemented and stable, but some planned features are still pending implementation:
+
+- Rich text formatting improvements
+- Search functionality enhancements
+- Widgets support
+- Sharing and export features
+- Quick actions and gestures
+
 ## Installation
 
 1. Clone the repository

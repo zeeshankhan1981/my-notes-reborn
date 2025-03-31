@@ -379,27 +379,22 @@ MyNotes/
    - Filter by tags
    - Tag management interface
 
-4. iCloud Sync
-   - Cross-device synchronization
-   - Conflict resolution
-   - Offline support
-
-5. Dark Mode Optimization
+4. Dark Mode Optimization
    - Dynamic color system
    - Theme-aware UI components
    - System appearance integration
 
-6. Widgets
+5. Widgets
    - Home screen widgets for quick access
    - Widget customization
    - Dynamic content updates
 
-7. Sharing and Export
+6. Sharing and Export
    - Note sharing capabilities
    - Export to various formats
    - Cloud export options
 
-8. Quick Actions
+7. Quick Actions
    - 3D Touch shortcuts
    - Quick note creation
    - Quick checklist creation
