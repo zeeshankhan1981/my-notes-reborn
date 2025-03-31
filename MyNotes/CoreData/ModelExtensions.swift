@@ -66,13 +66,17 @@ extension CDNote {
             // Then add the current tags
             if !note.tagIDs.isEmpty {
                 let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-                // Use IN predicate with UUID objects directly
-                tagRequest.predicate = NSPredicate(format: "id IN %@", note.tagIDs as [Any])
+                // Use IN predicate with string UUID values
+                let tagIDStrings = note.tagIDs.map { $0.uuidString }
+                tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
                 
-                if let tags = try context.fetch(tagRequest) {
+                do {
+                    let tags = try context.fetch(tagRequest)
                     for tag in tags {
                         cdNote.addToTags(tag)
                     }
+                } catch {
+                    print("Error fetching tags: \(error)")
                 }
             }
             
@@ -212,13 +216,17 @@ extension CDChecklistNote {
             // Then add the current tags
             if !checklist.tagIDs.isEmpty {
                 let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-                // Use IN predicate with UUID objects directly
-                tagRequest.predicate = NSPredicate(format: "id IN %@", checklist.tagIDs as [Any])
+                // Use IN predicate with string UUID values
+                let tagIDStrings = checklist.tagIDs.map { $0.uuidString }
+                tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
                 
-                if let tags = try context.fetch(tagRequest) {
+                do {
+                    let tags = try context.fetch(tagRequest)
                     for tag in tags {
                         cdChecklist.addToTags(tag)
                     }
+                } catch {
+                    print("Error fetching tags: \(error)")
                 }
             }
             
