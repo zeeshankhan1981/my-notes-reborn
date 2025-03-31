@@ -135,6 +135,30 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
+## Recent Changes (v0.2.3)
+
+### UI/UX Improvements
+- Implemented swipe-to-delete functionality for notes and checklists
+- Added consistent swipe behavior across all list views
+- Removed custom SwipeableCardView component for better reliability
+- Simplified swipe action implementation using native SwiftUI
+- Added haptic feedback for swipe actions
+
+### Core Data Improvements
+- Fixed ChecklistStore update method calls
+- Improved error handling in Core Data operations
+- Enhanced type safety in model updates
+
+## Recent Changes (v0.2.2)
+
+### UI/UX Enhancements
+- Implemented consistent UI across Note and Checklist editors
+- Created standardized button styles for navigation actions
+- Added consistent form field styling with icons
+- Improved visual hierarchy and spacing
+- Fixed build error with missing isRichTextEditorAvailable() function
+- Enhanced navigation bar consistency
+
 ## Recent Changes (v0.2.1)
 
 ### Search System Improvements
@@ -404,6 +428,21 @@ MyNotes/
 - Code review required
 
 ## Version History
+
+### v0.2.3 (2025-04-02)
+- Implemented swipe-to-delete functionality for notes and checklists
+- Added consistent swipe behavior across all list views
+- Fixed ChecklistStore update method calls
+- Improved error handling in Core Data operations
+- Enhanced type safety in model updates
+
+### v0.2.2 (2025-04-01)
+- Implemented consistent UI across Note and Checklist editors
+- Created standardized button styles for navigation actions
+- Added consistent form field styling with icons
+- Improved visual hierarchy and spacing
+- Fixed build error with missing isRichTextEditorAvailable() function
+- Enhanced navigation bar consistency
 
 ### v0.2.1 (2025-03-30)
 - Implemented robust search functionality across the app

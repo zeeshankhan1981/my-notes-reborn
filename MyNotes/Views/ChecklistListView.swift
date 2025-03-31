@@ -87,6 +87,37 @@ struct ChecklistListView: View {
                             animateListAppearance = true
                         }
                     }
+                    
+                    // Add observer for pin toggle from swipe actions
+                    NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleChecklistPin"), object: nil, queue: .main) { notification in
+                        if let checklistID = notification.object as? UUID,
+                           let checklist = checklistStore.checklists.first(where: { $0.id == checklistID }) {
+                            checklistStore.togglePin(checklist: checklist)
+                        }
+                    }
+                    
+                    // Add observer for complete all items from swipe actions
+                    NotificationCenter.default.addObserver(forName: NSNotification.Name("CompleteAllChecklistItems"), object: nil, queue: .main) { notification in
+                        if let checklistID = notification.object as? UUID,
+                           let index = checklistStore.checklists.firstIndex(where: { $0.id == checklistID }) {
+                            var updatedChecklist = checklistStore.checklists[index]
+                            let allDone = updatedChecklist.items.allSatisfy { $0.isDone }
+                            
+                            for i in 0..<updatedChecklist.items.count {
+                                updatedChecklist.items[i].isDone = !allDone
+                            }
+                            
+                            checklistStore.updateChecklist(checklist: updatedChecklist)
+                            
+                            let generator = UINotificationFeedbackGenerator()
+                            generator.notificationOccurred(.success)
+                        }
+                    }
+                }
+                .onDisappear {
+                    // Remove observers when view disappears
+                    NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleChecklistPin"), object: nil)
+                    NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CompleteAllChecklistItems"), object: nil)
                 }
         }
     }
@@ -180,6 +211,7 @@ struct ChecklistListView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
+                    .padding(.horizontal)
                     .background(AppTheme.Colors.error)
                     .cornerRadius(AppTheme.Dimensions.radiusM)
                     .padding(.horizontal)
@@ -208,75 +240,125 @@ struct ChecklistListView: View {
     }
     
     private var checklistContent: some View {
-        ScrollView {
-            VStack(spacing: AppTheme.Dimensions.spacing) {
-                // Pinned checklists
-                if !pinnedChecklists.isEmpty {
-                    pinnedChecklistsSection
-                }
-                
-                // Unpinned checklists
-                if !unpinnedChecklists.isEmpty {
-                    unpinnedChecklistsSection
-                }
-            }
-            .padding(.top, AppTheme.Dimensions.smallSpacing)
-            .opacity(animateListAppearance ? 1 : 0)
-            .offset(y: animateListAppearance ? 0 : 20)
-        }
-    }
-    
-    private var pinnedChecklistsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            HStack {
-                Label("Pinned", systemImage: "pin.fill")
-                    .font(AppTheme.Typography.subheadline())
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                
-                Spacer()
-            }
-            .padding(.horizontal)
-            
-            checklistGrid(items: pinnedChecklists)
-            
-            Divider()
-                .padding(.horizontal)
-        }
-    }
-    
-    private var unpinnedChecklistsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
+        List {
+            // Pinned checklists
             if !pinnedChecklists.isEmpty {
-                HStack {
+                Section(header: 
+                    Label("Pinned", systemImage: "pin.fill")
+                        .font(AppTheme.Typography.subheadline())
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                ) {
+                    ForEach(pinnedChecklists) { checklist in
+                        checklistCardView(for: checklist)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    let generator = UINotificationFeedbackGenerator()
+                                    generator.notificationOccurred(.warning)
+                                    checklistStore.delete(checklist: checklist)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.impactOccurred()
+                                    checklistStore.togglePin(checklist: checklist)
+                                } label: {
+                                    Label("Unpin", systemImage: "pin.slash")
+                                }
+                                .tint(AppTheme.Colors.primary)
+                                
+                                Button {
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.impactOccurred()
+                                    
+                                    if let index = checklistStore.checklists.firstIndex(where: { $0.id == checklist.id }) {
+                                        var updatedChecklist = checklistStore.checklists[index]
+                                        let allDone = updatedChecklist.items.allSatisfy { $0.isDone }
+                                        
+                                        for i in 0..<updatedChecklist.items.count {
+                                            updatedChecklist.items[i].isDone = !allDone
+                                        }
+                                        
+                                        checklistStore.updateChecklist(checklist: updatedChecklist)
+                                        
+                                        let generator = UINotificationFeedbackGenerator()
+                                        generator.notificationOccurred(.success)
+                                    }
+                                } label: {
+                                    Label("Complete All", systemImage: "checkmark.circle")
+                                }
+                                .tint(AppTheme.Colors.accent)
+                            }
+                    }
+                }
+            }
+            
+            // Unpinned checklists
+            Section(header: 
+                !pinnedChecklists.isEmpty ?
                     Text("Checklists")
                         .font(AppTheme.Typography.subheadline())
                         .foregroundColor(AppTheme.Colors.textSecondary)
-                    
-                    Spacer()
+                : nil
+            ) {
+                ForEach(unpinnedChecklists) { checklist in
+                    checklistCardView(for: checklist)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                let generator = UINotificationFeedbackGenerator()
+                                generator.notificationOccurred(.warning)
+                                checklistStore.delete(checklist: checklist)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                checklistStore.togglePin(checklist: checklist)
+                            } label: {
+                                Label("Pin", systemImage: "pin.fill")
+                            }
+                            .tint(AppTheme.Colors.primary)
+                            
+                            Button {
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                                
+                                if let index = checklistStore.checklists.firstIndex(where: { $0.id == checklist.id }) {
+                                    var updatedChecklist = checklistStore.checklists[index]
+                                    let allDone = updatedChecklist.items.allSatisfy { $0.isDone }
+                                    
+                                    for i in 0..<updatedChecklist.items.count {
+                                        updatedChecklist.items[i].isDone = !allDone
+                                    }
+                                    
+                                    checklistStore.updateChecklist(checklist: updatedChecklist)
+                                    
+                                    let generator = UINotificationFeedbackGenerator()
+                                    generator.notificationOccurred(.success)
+                                }
+                            } label: {
+                                Label("Complete All", systemImage: "checkmark.circle")
+                            }
+                            .tint(AppTheme.Colors.accent)
+                        }
                 }
-                .padding(.horizontal)
-            }
-            
-            checklistGrid(items: unpinnedChecklists)
-        }
-    }
-    
-    private func checklistGrid(items: [ChecklistNote]) -> some View {
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 300), spacing: AppTheme.Dimensions.spacingM)],
-            spacing: AppTheme.Dimensions.spacingM
-        ) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, checklist in
-                checklistCardView(for: checklist)
-                    .opacity(animateListAppearance ? 1 : 0)
-                    .offset(y: animateListAppearance ? 0 : 20)
-                    .animation(
-                        AppTheme.Animations.standardCurve.delay(Double(index) * 0.05),
-                        value: animateListAppearance
-                    )
             }
         }
-        .padding(.horizontal)
+        .listStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .opacity(animateListAppearance ? 1 : 0)
+        .animation(.easeInOut, value: animateListAppearance)
     }
     
     private var emptyStateView: some View {
@@ -369,19 +451,9 @@ struct ChecklistListView: View {
                         selectedChecklists.removeAll()
                     }
                 }
+                .foregroundColor(AppTheme.Colors.primary)
             } else {
                 Menu {
-                    Button {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            isShowingSearch.toggle()
-                            if isShowingSearch == false {
-                                searchText = ""
-                            }
-                        }
-                    } label: {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                    
                     Button {
                         withAnimation(AppTheme.Animations.standardCurve) {
                             showingTagFilter.toggle()
@@ -402,63 +474,58 @@ struct ChecklistListView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 18))
                         .foregroundColor(AppTheme.Colors.primary)
                 }
-                .menuStyle(BorderlessButtonMenuStyle())
             }
         }
-        .buttonStyle(PressableButtonStyle())
     }
     
     private var trailingToolbarContent: some View {
         Group {
             if isSelectionMode {
-                // Already showing selection toolbar at the top
-                EmptyView()
+                Button("Select All") {
+                    withAnimation(AppTheme.Animations.standardCurve) {
+                        selectedChecklists = Set(filteredChecklists.map { $0.id })
+                    }
+                }
+                .foregroundColor(AppTheme.Colors.primary)
             } else {
                 HStack(spacing: 16) {
-                    // Direct Add button
-                    Button(action: {
-                        selectedChecklist = nil
+                    // Add button
+                    Button {
                         showingAdd = true
-                        // Add haptic feedback
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                    }) {
+                    } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(AppTheme.Colors.primary)
                     }
                     .accessibilityLabel("Add Checklist")
                     
-                    // Search button
-                    Button(action: {
+                    // Search button - keep only this search entry point
+                    Button {
                         withAnimation(AppTheme.Animations.standardCurve) {
                             isShowingSearch.toggle()
                             if isShowingSearch == false {
                                 searchText = ""
                             }
                         }
-                    }) {
+                    } label: {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 18))
                             .foregroundColor(AppTheme.Colors.primary)
                     }
-                    .buttonStyle(PressableButtonStyle())
                     .accessibilityLabel("Search")
                     
                     // Select button
-                    Button(action: {
+                    Button {
                         withAnimation(AppTheme.Animations.standardCurve) {
                             isSelectionMode = true
                         }
-                    }) {
+                    } label: {
                         Image(systemName: "checkmark.circle")
                             .font(.system(size: 18))
                             .foregroundColor(AppTheme.Colors.primary)
                     }
-                    .buttonStyle(PressableButtonStyle())
                     .accessibilityLabel("Select Checklists")
                 }
             }

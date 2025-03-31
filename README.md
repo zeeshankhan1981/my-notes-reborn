@@ -65,6 +65,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
+### v0.2.3 (2025-03-31)
+- Implemented swipe-to-delete functionality for notes and checklists
+- Fixed Core Data update method calls in ChecklistStore
+- Simplified swipe action implementation for better reliability
+- Removed custom SwipeableCardView component
+- Added consistent swipe behavior across all list views
+
 ### v0.2.2 (2025-03-31)
 - Implemented UI consistency across Note and Checklist editors
 - Created standardized button styles for navigation actions

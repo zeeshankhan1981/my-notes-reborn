@@ -76,6 +76,19 @@ struct NoteListView: View {
                         selectedNote = nil
                     }
                 }
+                .onAppear {
+                    // Add observer for pin toggle from swipe actions
+                    NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleNotePin"), object: nil, queue: .main) { notification in
+                        if let noteID = notification.object as? UUID,
+                           let note = noteStore.notes.first(where: { $0.id == noteID }) {
+                            noteStore.togglePin(note: note)
+                        }
+                    }
+                }
+                .onDisappear {
+                    // Remove observer when view disappears
+                    NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleNotePin"), object: nil)
+                }
         }
     }
     
@@ -108,23 +121,79 @@ struct NoteListView: View {
                 if filteredNotes.isEmpty {
                     emptyStateView
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            // Pinned notes
-                            if !pinnedNotes.isEmpty {
-                                pinnedNotesSection
-                            }
-                            
-                            // Unpinned notes
-                            if !unpinnedNotes.isEmpty {
-                                unpinnedNotesSection
+                    List {
+                        // Pinned notes
+                        if !pinnedNotes.isEmpty {
+                            Section(header: 
+                                Text("Pinned")
+                                    .font(AppTheme.Typography.headline())
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                            ) {
+                                ForEach(pinnedNotes) { note in
+                                    noteCardView(for: note)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                        .listRowBackground(Color.clear)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                let generator = UINotificationFeedbackGenerator()
+                                                generator.notificationOccurred(.warning)
+                                                noteStore.delete(note: note)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                        }
+                                        .swipeActions(edge: .leading) {
+                                            Button {
+                                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                generator.impactOccurred()
+                                                noteStore.togglePin(note: note)
+                                            } label: {
+                                                Label("Unpin", systemImage: "pin.slash")
+                                            }
+                                            .tint(AppTheme.Colors.primary)
+                                        }
+                                }
                             }
                         }
-                        .padding(.top, 8)
+                        
+                        // Unpinned notes
+                        Section(header: 
+                            !pinnedNotes.isEmpty ?
+                                Text("Notes")
+                                    .font(AppTheme.Typography.headline())
+                                    .foregroundColor(AppTheme.Colors.textSecondary)
+                            : nil
+                        ) {
+                            ForEach(unpinnedNotes) { note in
+                                noteCardView(for: note)
+                                    .listRowSeparator(.hidden)
+                                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                    .listRowBackground(Color.clear)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            let generator = UINotificationFeedbackGenerator()
+                                            generator.notificationOccurred(.warning)
+                                            noteStore.delete(note: note)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                    .swipeActions(edge: .leading) {
+                                        Button {
+                                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                                            generator.impactOccurred()
+                                            noteStore.togglePin(note: note)
+                                        } label: {
+                                            Label("Pin", systemImage: "pin.fill")
+                                        }
+                                        .tint(AppTheme.Colors.primary)
+                                    }
+                            }
+                        }
                     }
-                    .safeAreaInset(edge: .bottom) {
-                        Color.clear.frame(height: 0)
-                    }
+                    .listStyle(.inset)
+                    .scrollContentBackground(.hidden)
                 }
             }
         }
@@ -202,49 +271,6 @@ struct NoteListView: View {
         )
     }
     
-    private var pinnedNotesSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            HStack {
-                Text("Pinned")
-                    .font(AppTheme.Typography.headline())
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                
-                Spacer()
-            }
-            .padding(.horizontal)
-            
-            noteGrid(items: pinnedNotes)
-            
-            Divider()
-                .padding(.horizontal)
-        }
-    }
-    
-    private var unpinnedNotesSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            if !pinnedNotes.isEmpty {
-                Text("Notes")
-                    .font(AppTheme.Typography.headline())
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                    .padding(.horizontal)
-            }
-            
-            noteGrid(items: unpinnedNotes)
-        }
-    }
-    
-    private func noteGrid(items: [Note]) -> some View {
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 300), spacing: AppTheme.Dimensions.spacing)],
-            spacing: AppTheme.Dimensions.spacing
-        ) {
-            ForEach(items) { note in
-                noteCardView(for: note)
-            }
-        }
-        .padding(.horizontal)
-    }
-    
     private var emptyStateView: some View {
         VStack(spacing: AppTheme.Dimensions.spacing) {
             Image(systemName: "note.text")
@@ -275,17 +301,6 @@ struct NoteListView: View {
                 }
             } else {
                 Menu {
-                    Button {
-                        withAnimation {
-                            isShowingSearch.toggle()
-                            if isShowingSearch == false {
-                                searchText = ""
-                            }
-                        }
-                    } label: {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                    
                     Button {
                         withAnimation {
                             showingTagFilter.toggle()
