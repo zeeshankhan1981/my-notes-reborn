@@ -32,11 +32,12 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Nested folder support
 
 - 🔍 Search Functionality
-  - Full-text search across notes and checklists
-  - Consistent search UI in all views  
-  - Global search capability with unified results
+  - Consistent search UI with a single search icon in toolbar
   - Real-time search with visual feedback
-  - Actionable search results with direct access to items
+  - Character count display
+  - Haptic feedback on focus
+  - Unified search experience across notes and checklists
+  - Clear search status messages
 
 - 💾 Data Persistence
   - Core Data integration
@@ -66,11 +67,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Version History
 
 ### v0.2.3 (2025-03-31)
-- Implemented swipe-to-delete functionality for notes and checklists
-- Fixed Core Data update method calls in ChecklistStore
-- Simplified swipe action implementation for better reliability
-- Removed custom SwipeableCardView component
-- Added consistent swipe behavior across all list views
+- Streamlined search experience:
+  - Removed redundant search options
+  - Standardized search icon in toolbar
+  - Enhanced SearchBarView with visual feedback and haptic feedback
+- Improved swipe functionality:
+  - Implemented proper swipe-to-delete in NoteListView and ChecklistListView
+  - Removed duplicate swipe actions from card views
+  - Added consistent swipe behavior across all list views
+- UI/UX improvements:
+  - Added character count display in search bar
+  - Improved visual consistency across the app
+  - Enhanced search status messages
 
 ### v0.2.2 (2025-03-31)
 - Implemented UI consistency across Note and Checklist editors

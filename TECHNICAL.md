@@ -137,17 +137,32 @@ MyNotes/
 
 ## Recent Changes (v0.2.3)
 
+### Search System Improvements
+- Streamlined search experience:
+  - Removed redundant search options from dropdown menus
+  - Standardized search icon in toolbar across all views
+  - Enhanced SearchBarView with:
+    - Clear visual feedback for active searches
+    - Character count display
+    - Haptic feedback on focus
+    - Search status messages
+  - Implemented consistent search behavior across notes and checklists
+
 ### UI/UX Improvements
-- Implemented swipe-to-delete functionality for notes and checklists
-- Added consistent swipe behavior across all list views
+- Swipe functionality:
+  - Implemented proper swipe-to-delete in NoteListView and ChecklistListView
+  - Removed duplicate swipe actions from NoteCardView and ChecklistCardView
+  - Added consistent swipe behavior across all list views
+  - Enhanced visual feedback for swipe actions
+- Visual consistency:
+  - Standardized toolbar icons and actions
+  - Improved spacing and layout in list views
+  - Added proper visual separators in search bar
+
+### Performance Optimizations
 - Removed custom SwipeableCardView component for better reliability
 - Simplified swipe action implementation using native SwiftUI
-- Added haptic feedback for swipe actions
-
-### Core Data Improvements
-- Fixed ChecklistStore update method calls
-- Improved error handling in Core Data operations
-- Enhanced type safety in model updates
+- Enhanced search bar performance with optimized text handling
 
 ## Recent Changes (v0.2.2)
 
