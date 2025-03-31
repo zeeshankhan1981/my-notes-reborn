@@ -63,6 +63,22 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
+### v0.2.0 (2025-03-30)
+- Fixed UUID casting issues in Core Data predicates
+- Moved checklist creation button to top-right toolbar for consistency
+- Improved tag relationship handling in Core Data
+- Fixed layout constraint warnings
+- Enhanced error handling in model-to-CDNote conversion
+
+### v0.1.9 (2025-03-30)
+- Fixed complex type-checking issues in ChecklistEditorView
+- Added missing theme colors (danger, selectedRowBackground)
+- Updated iOS 17 onChange syntax compatibility
+- Fixed animation and binding issues
+- Removed duplicate component declarations
+- Added new UI components (AnimatedCheckbox, ButtonStyles, Layouts)
+- Updated tag selection system to use FlowLayout
+
 ### v0.1.7 (2025-03-30)
 - Fixed UI spacing issues in ChecklistListView
 - Removed redundant empty state checks

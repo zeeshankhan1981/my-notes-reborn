@@ -135,6 +135,32 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
+## Recent Changes (v0.2.0)
+
+### Core Data Improvements
+- Fixed UUID casting issues in predicates
+- Improved tag relationship handling
+- Enhanced error handling in model-to-CDNote conversion
+- Added proper UUID string conversion for Core Data queries
+
+### UI/UX Improvements
+- Moved checklist creation button to top-right toolbar for consistency
+- Fixed layout constraint warnings
+- Improved visual hierarchy and spacing
+
+## Recent Changes (v0.1.9)
+
+### Bug Fixes
+- Fixed complex type-checking issues in ChecklistEditorView
+- Added missing theme colors (danger, selectedRowBackground)
+- Updated iOS 17 onChange syntax compatibility
+- Fixed animation and binding issues
+- Removed duplicate component declarations
+
+### New Features
+- Added new UI components (AnimatedCheckbox, ButtonStyles, Layouts)
+- Updated tag selection system to use FlowLayout
+
 ## Recent Changes (v0.1.7)
 
 ### UI Improvements
@@ -361,12 +387,23 @@ MyNotes/
 
 ## Version History
 
-### v0.1.2 (2025-04-01)
-- Fixed rich text editor formatting toolbar visibility and functionality
-- Improved layout consistency across note and checklist editors
-- Removed unwanted spacing at the top of editor views
-- Enhanced visual hierarchy with proper spacing and typography
-- Added smooth transitions for formatting toolbar
+### v0.2.0 (2025-04-01)
+- Fixed UUID casting issues in predicates
+- Improved tag relationship handling
+- Enhanced error handling in model-to-CDNote conversion
+- Added proper UUID string conversion for Core Data queries
+- Moved checklist creation button to top-right toolbar for consistency
+- Fixed layout constraint warnings
+- Improved visual hierarchy and spacing
+
+### v0.1.9 (2025-03-30)
+- Fixed complex type-checking issues in ChecklistEditorView
+- Added missing theme colors (danger, selectedRowBackground)
+- Updated iOS 17 onChange syntax compatibility
+- Fixed animation and binding issues
+- Removed duplicate component declarations
+- Added new UI components (AnimatedCheckbox, ButtonStyles, Layouts)
+- Updated tag selection system to use FlowLayout
 
 ### v0.1.1 (2025-03-30)
 - Added tag filtering system

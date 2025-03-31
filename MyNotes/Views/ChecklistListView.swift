@@ -249,44 +249,6 @@ struct ChecklistListView: View {
             .opacity(animateListAppearance ? 1 : 0)
             .offset(y: animateListAppearance ? 0 : 20)
         }
-        .safeAreaInset(edge: .bottom) {
-            // Floating action button for adding a new checklist
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    floatingAddButton
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 10)
-            }
-            .ignoresSafeArea(.keyboard)
-        }
-    }
-    
-    private var floatingAddButton: some View {
-        Button(action: {
-            selectedChecklist = nil
-            showingAdd = true
-            // Add haptic feedback
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-        }) {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(AppTheme.Colors.primary)
-                .cornerRadius(28)
-                .shadow(
-                    color: AppTheme.Colors.cardShadow.opacity(0.3),
-                    radius: 8,
-                    x: 0,
-                    y: 4
-                )
-        }
-        .buttonStyle(PressableButtonStyle())
-        .transition(.scale.combined(with: .opacity))
     }
     
     private var pinnedChecklistsSection: some View {
@@ -481,6 +443,20 @@ struct ChecklistListView: View {
                 EmptyView()
             } else {
                 HStack(spacing: 16) {
+                    // Direct Add button
+                    Button(action: {
+                        selectedChecklist = nil
+                        showingAdd = true
+                        // Add haptic feedback
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                        impactFeedback.impactOccurred()
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(AppTheme.Colors.primary)
+                    }
+                    .accessibilityLabel("Add Checklist")
+                    
                     // Search button
                     Button(action: {
                         withAnimation(AppTheme.Animations.standardCurve) {

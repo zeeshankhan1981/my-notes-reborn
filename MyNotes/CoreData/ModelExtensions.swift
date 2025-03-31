@@ -25,7 +25,7 @@ extension CDNote {
         
         // Check if note already exists
         let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", note.id.uuidString)
         request.fetchLimit = 1
         
         if let existingNote = try? context.fetch(request).first {
@@ -46,7 +46,7 @@ extension CDNote {
         // Handle folder relationship if needed
         if let folderID = note.folderID {
             let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-            folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+            folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
             if let folder = try? context.fetch(folderRequest).first {
                 cdNote.folder = folder
             }
@@ -63,7 +63,10 @@ extension CDNote {
         // Then add the current tags
         if !note.tagIDs.isEmpty {
             let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-            tagRequest.predicate = NSPredicate(format: "id IN %@", note.tagIDs as [CVarArg])
+            // Convert UUIDs to strings to avoid casting issues
+            let tagIDStrings = note.tagIDs.map { $0.uuidString }
+            tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
+            
             if let tags = try? context.fetch(tagRequest) {
                 for tag in tags {
                     cdNote.addToTags(tag)
@@ -89,7 +92,7 @@ extension CDChecklistItem {
         let cdItem: CDChecklistItem
         
         let request: NSFetchRequest<CDChecklistItem> = CDChecklistItem.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", item.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", item.id.uuidString)
         
         if let existingItem = try? context.fetch(request).first {
             cdItem = existingItem
@@ -130,7 +133,7 @@ extension CDChecklistNote {
         
         // Check if checklist already exists
         let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", checklist.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", checklist.id.uuidString)
         request.fetchLimit = 1
         
         if let existingChecklist = try? context.fetch(request).first {
@@ -156,7 +159,7 @@ extension CDChecklistNote {
         // Handle folder relationship if needed
         if let folderID = checklist.folderID {
             let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-            folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+            folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
             if let folder = try? context.fetch(folderRequest).first {
                 cdChecklist.folder = folder
             }
@@ -179,7 +182,10 @@ extension CDChecklistNote {
         // Then add the current tags
         if !checklist.tagIDs.isEmpty {
             let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-            tagRequest.predicate = NSPredicate(format: "id IN %@", checklist.tagIDs as [CVarArg])
+            // Convert UUIDs to strings to avoid casting issues
+            let tagIDStrings = checklist.tagIDs.map { $0.uuidString }
+            tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
+            
             if let tags = try? context.fetch(tagRequest) {
                 for tag in tags {
                     cdChecklist.addToTags(tag)
@@ -204,7 +210,7 @@ extension CDFolder {
         let cdFolder: CDFolder
         
         let request: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", folder.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", folder.id.uuidString)
         
         if let existingFolder = try? context.fetch(request).first {
             cdFolder = existingFolder
@@ -233,7 +239,7 @@ extension CDTag {
         let cdTag: CDTag
         
         let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", tag.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", tag.id.uuidString)
         
         if let existingTag = try? context.fetch(request).first {
             cdTag = existingTag
