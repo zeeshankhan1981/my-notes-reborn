@@ -13,6 +13,8 @@ struct ChecklistListView: View {
     @State private var isShowingDeleteConfirmation = false
     @State private var selectedTagIDs = Set<UUID>()
     @State private var showingTagFilter = false
+    @State private var animateListAppearance = false
+    @Environment(\.colorScheme) private var colorScheme
     
     private var filteredChecklists: [ChecklistNote] {
         var checklists = checklistStore.checklists
@@ -78,6 +80,14 @@ struct ChecklistListView: View {
                         selectedChecklist = nil
                     }
                 }
+                .onAppear {
+                    // Trigger animation when view appears
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(AppTheme.Animations.standardCurve) {
+                            animateListAppearance = true
+                        }
+                    }
+                }
         }
     }
     
@@ -98,7 +108,7 @@ struct ChecklistListView: View {
                 }
                 
                 if showingTagFilter {
-                    TagFilterView(selectedTagIDs: $selectedTagIDs)
+                    TagFilterView(selectedTagIds: $selectedTagIDs)
                         .padding(.horizontal)
                         .padding(.top, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
@@ -106,8 +116,10 @@ struct ChecklistListView: View {
 
                 if filteredChecklists.isEmpty {
                     emptyStateView
+                        .transition(.opacity)
                 } else {
                     checklistContent
+                        .transition(.opacity)
                 }
             }
             .background(AppTheme.Colors.background)
@@ -132,7 +144,7 @@ struct ChecklistListView: View {
         VStack(spacing: 0) {
             HStack {
                 Button("Cancel") {
-                    withAnimation {
+                    withAnimation(AppTheme.Animations.standardCurve) {
                         isSelectionMode = false
                         selectedChecklists.removeAll()
                     }
@@ -148,7 +160,7 @@ struct ChecklistListView: View {
                 Spacer()
                 
                 Button("Select All") {
-                    withAnimation {
+                    withAnimation(AppTheme.Animations.standardCurve) {
                         selectedChecklists = Set(filteredChecklists.map { $0.id })
                     }
                 }
@@ -168,13 +180,22 @@ struct ChecklistListView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.red)
-                    .cornerRadius(10)
+                    .background(AppTheme.Colors.error)
+                    .cornerRadius(AppTheme.Dimensions.radiusM)
                     .padding(.horizontal)
                 }
+                .buttonStyle(PressableButtonStyle())
             }
         }
-        .background(AppTheme.Colors.secondaryBackground)
+        .background(colorScheme == .dark ? 
+            AppTheme.Colors.cardSurface.opacity(0.9) : 
+            AppTheme.Colors.secondaryBackground.opacity(0.9))
+        .shadow(
+            color: AppTheme.Colors.cardShadow.opacity(0.1),
+            radius: 3,
+            x: 0,
+            y: 2
+        )
         .transition(.move(edge: .top).combined(with: .opacity))
     }
     
@@ -182,8 +203,10 @@ struct ChecklistListView: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(AppTheme.Colors.textTertiary)
+            
             TextField("Search checklists...", text: $searchText)
                 .font(AppTheme.Typography.body())
+                .submitLabel(.search)
             
             if !searchText.isEmpty {
                 Button(action: {
@@ -192,11 +215,21 @@ struct ChecklistListView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(AppTheme.Colors.textTertiary)
                 }
+                .transition(.scale.combined(with: .opacity))
+                .buttonStyle(PressableButtonStyle())
             }
         }
-        .padding(8)
-        .background(AppTheme.Colors.cardSurface)
-        .cornerRadius(8)
+        .padding(10)
+        .background(colorScheme == .dark ? 
+            AppTheme.Colors.cardSurface : 
+            AppTheme.Colors.secondaryBackground)
+        .cornerRadius(AppTheme.Dimensions.radiusM)
+        .shadow(
+            color: AppTheme.Colors.cardShadow.opacity(0.05),
+            radius: 2,
+            x: 0,
+            y: 1
+        )
     }
     
     private var checklistContent: some View {
@@ -213,14 +246,54 @@ struct ChecklistListView: View {
                 }
             }
             .padding(.top, AppTheme.Dimensions.smallSpacing)
+            .opacity(animateListAppearance ? 1 : 0)
+            .offset(y: animateListAppearance ? 0 : 20)
         }
+        .safeAreaInset(edge: .bottom) {
+            // Floating action button for adding a new checklist
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    floatingAddButton
+                }
+                .padding(.trailing, 20)
+                .padding(.bottom, 10)
+            }
+            .ignoresSafeArea(.keyboard)
+        }
+    }
+    
+    private var floatingAddButton: some View {
+        Button(action: {
+            selectedChecklist = nil
+            showingAdd = true
+            // Add haptic feedback
+            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+            impactFeedback.impactOccurred()
+        }) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(AppTheme.Colors.primary)
+                .cornerRadius(28)
+                .shadow(
+                    color: AppTheme.Colors.cardShadow.opacity(0.3),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
+        }
+        .buttonStyle(PressableButtonStyle())
+        .transition(.scale.combined(with: .opacity))
     }
     
     private var pinnedChecklistsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             HStack {
-                Text("Pinned")
-                    .font(AppTheme.Typography.headline())
+                Label("Pinned", systemImage: "pin.fill")
+                    .font(AppTheme.Typography.subheadline())
                     .foregroundColor(AppTheme.Colors.textSecondary)
                 
                 Spacer()
@@ -237,10 +310,14 @@ struct ChecklistListView: View {
     private var unpinnedChecklistsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
             if !pinnedChecklists.isEmpty {
-                Text("Checklists")
-                    .font(AppTheme.Typography.headline())
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                    .padding(.horizontal)
+                HStack {
+                    Text("Checklists")
+                        .font(AppTheme.Typography.subheadline())
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    Spacer()
+                }
+                .padding(.horizontal)
             }
             
             checklistGrid(items: unpinnedChecklists)
@@ -249,40 +326,108 @@ struct ChecklistListView: View {
     
     private func checklistGrid(items: [ChecklistNote]) -> some View {
         LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 300), spacing: AppTheme.Dimensions.spacing)],
-            spacing: AppTheme.Dimensions.spacing
+            columns: [GridItem(.adaptive(minimum: 300), spacing: AppTheme.Dimensions.spacingM)],
+            spacing: AppTheme.Dimensions.spacingM
         ) {
-            ForEach(items) { checklist in
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, checklist in
                 checklistCardView(for: checklist)
+                    .opacity(animateListAppearance ? 1 : 0)
+                    .offset(y: animateListAppearance ? 0 : 20)
+                    .animation(
+                        AppTheme.Animations.standardCurve.delay(Double(index) * 0.05),
+                        value: animateListAppearance
+                    )
             }
         }
         .padding(.horizontal)
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: AppTheme.Dimensions.spacing) {
-            Image(systemName: "checklist")
-                .font(.largeTitle)
-                .foregroundColor(AppTheme.Colors.textTertiary)
+        VStack(spacing: AppTheme.Dimensions.spacingL) {
+            ZStack {
+                Circle()
+                    .fill(colorScheme == .dark ? 
+                          AppTheme.Colors.secondaryBackground : 
+                          AppTheme.Colors.highlightBackground)
+                    .frame(width: 120, height: 120)
+                
+                Image(systemName: "checklist")
+                    .font(.system(size: 48))
+                    .foregroundColor(AppTheme.Colors.primary)
+            }
+            .padding(.bottom, AppTheme.Dimensions.spacing)
             
-            Text(searchText.isEmpty ? "No Checklists" : "No Results")
-                .font(AppTheme.Typography.title())
-                .foregroundColor(AppTheme.Colors.textPrimary)
+            VStack(spacing: AppTheme.Dimensions.spacingS) {
+                Text(searchText.isEmpty ? "No Checklists" : "No Results")
+                    .font(AppTheme.Typography.title())
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                
+                Text(searchText.isEmpty ? "Create a checklist to track tasks and stay organized" : "Try different search terms or clear filters")
+                    .font(AppTheme.Typography.body())
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
             
-            Text(searchText.isEmpty ? "Tap + to create a new checklist" : "Try a different search")
-                .font(AppTheme.Typography.body())
-                .foregroundColor(AppTheme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
+            if searchText.isEmpty && selectedTagIDs.isEmpty {
+                Button(action: {
+                    selectedChecklist = nil
+                    showingAdd = true
+                    // Add haptic feedback
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                    impactFeedback.impactOccurred()
+                }) {
+                    HStack {
+                        Image(systemName: "plus")
+                        Text("Create Checklist")
+                    }
+                    .font(AppTheme.Typography.button())
+                    .foregroundColor(.white)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 20)
+                    .background(AppTheme.Colors.primary)
+                    .cornerRadius(AppTheme.Dimensions.radiusM)
+                }
+                .buttonStyle(PressableButtonStyle())
+                .padding(.top, AppTheme.Dimensions.spacing)
+            } else {
+                Button(action: {
+                    withAnimation {
+                        searchText = ""
+                        selectedTagIDs.removeAll()
+                        isShowingSearch = false
+                        showingTagFilter = false
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: "xmark")
+                        Text("Clear Filters")
+                    }
+                    .font(AppTheme.Typography.button())
+                    .foregroundColor(AppTheme.Colors.primary)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
+                            .stroke(AppTheme.Colors.primary, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(PressableButtonStyle())
+                .padding(.top, AppTheme.Dimensions.spacing)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .opacity(animateListAppearance ? 1 : 0)
+        .offset(y: animateListAppearance ? 0 : 20)
+        .animation(AppTheme.Animations.standardCurve, value: animateListAppearance)
     }
     
     private var leadingToolbarContent: some View {
         Group {
             if isSelectionMode {
                 Button("Cancel") {
-                    withAnimation {
+                    withAnimation(AppTheme.Animations.standardCurve) {
                         isSelectionMode = false
                         selectedChecklists.removeAll()
                     }
@@ -290,7 +435,7 @@ struct ChecklistListView: View {
             } else {
                 Menu {
                     Button {
-                        withAnimation {
+                        withAnimation(AppTheme.Animations.standardCurve) {
                             isShowingSearch.toggle()
                             if isShowingSearch == false {
                                 searchText = ""
@@ -301,7 +446,7 @@ struct ChecklistListView: View {
                     }
                     
                     Button {
-                        withAnimation {
+                        withAnimation(AppTheme.Animations.standardCurve) {
                             showingTagFilter.toggle()
                             if showingTagFilter == false {
                                 selectedTagIDs.removeAll()
@@ -312,7 +457,7 @@ struct ChecklistListView: View {
                     }
                     
                     Button {
-                        withAnimation {
+                        withAnimation(AppTheme.Animations.standardCurve) {
                             isSelectionMode = true
                         }
                     } label: {
@@ -320,9 +465,13 @@ struct ChecklistListView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppTheme.Colors.primary)
                 }
+                .menuStyle(BorderlessButtonMenuStyle())
             }
         }
+        .buttonStyle(PressableButtonStyle())
     }
     
     private var trailingToolbarContent: some View {
@@ -332,27 +481,33 @@ struct ChecklistListView: View {
                 EmptyView()
             } else {
                 HStack(spacing: 16) {
-                    // Direct Add button
+                    // Search button
                     Button(action: {
-                        selectedChecklist = nil
-                        showingAdd = true
+                        withAnimation(AppTheme.Animations.standardCurve) {
+                            isShowingSearch.toggle()
+                            if isShowingSearch == false {
+                                searchText = ""
+                            }
+                        }
                     }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 18))
                             .foregroundColor(AppTheme.Colors.primary)
                     }
-                    .accessibilityLabel("Add Checklist")
+                    .buttonStyle(PressableButtonStyle())
+                    .accessibilityLabel("Search")
                     
                     // Select button
                     Button(action: {
-                        withAnimation {
+                        withAnimation(AppTheme.Animations.standardCurve) {
                             isSelectionMode = true
                         }
                     }) {
                         Image(systemName: "checkmark.circle")
-                            .font(.system(size: 18, weight: .regular))
+                            .font(.system(size: 18))
                             .foregroundColor(AppTheme.Colors.primary)
                     }
+                    .buttonStyle(PressableButtonStyle())
                     .accessibilityLabel("Select Checklists")
                 }
             }
@@ -369,6 +524,7 @@ struct ChecklistListView: View {
                         Button("Cancel") {
                             showingAdd = false
                         }
+                        .buttonStyle(PressableButtonStyle())
                     }
                 }
         }
@@ -384,6 +540,7 @@ struct ChecklistListView: View {
                         Button("Done") {
                             isEditing = false
                         }
+                        .buttonStyle(PressableButtonStyle())
                     }
                 }
         }
@@ -400,7 +557,9 @@ struct ChecklistListView: View {
                 }
             },
             onDelete: {
-                checklistStore.delete(checklist: checklist)
+                withAnimation(AppTheme.Animations.standardCurve) {
+                    checklistStore.delete(checklist: checklist)
+                }
             },
             onLongPress: {
                 handleLongPress(for: checklist)
@@ -438,7 +597,7 @@ struct ChecklistListView: View {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        withAnimation {
+        withAnimation(AppTheme.Animations.standardCurve) {
             if isSelectionMode {
                 // Already in selection mode, toggle this checklist
                 toggleSelection(for: checklist)
@@ -456,7 +615,7 @@ struct ChecklistListView: View {
             
             // If no items are selected, exit selection mode
             if selectedChecklists.isEmpty {
-                withAnimation {
+                withAnimation(AppTheme.Animations.standardCurve) {
                     isSelectionMode = false
                 }
             }
@@ -466,6 +625,10 @@ struct ChecklistListView: View {
     }
     
     private func deleteSelectedChecklists() {
+        // Add haptic feedback for destructive action
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
         // Create a temporary copy to avoid modification during iteration
         let checklistsToDelete = selectedChecklists
         
@@ -478,7 +641,7 @@ struct ChecklistListView: View {
         
         // Clear selection and exit selection mode
         selectedChecklists.removeAll()
-        withAnimation {
+        withAnimation(AppTheme.Animations.standardCurve) {
             isSelectionMode = false
         }
     }

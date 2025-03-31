@@ -19,6 +19,7 @@ struct AppTheme {
         static let success = Color.green
         static let warning = Color.orange
         static let error = Color.red
+        static let danger = Color.red // Alias for error to maintain compatibility
         static let info = Color.blue
         
         // Simplified surface colors
@@ -26,6 +27,7 @@ struct AppTheme {
         static let cardShadow = Color.black.opacity(0.05)
         static let divider = Color(UIColor.systemGray5)
         static let highlightBackground = Color.blue.opacity(0.1)
+        static let selectedRowBackground = Color.blue.opacity(0.08) // For selected rows/items
         
         // Focus mode
         static let focusBackground = Color(white: 0.98)
@@ -98,6 +100,10 @@ struct AppTheme {
             return Font.system(size: 22, weight: .medium)
         }
         
+        static func title3() -> Font {
+            return Font.system(size: 20, weight: .medium)
+        }
+        
         static func headline() -> Font {
             return Font.system(size: 17, weight: .semibold)
         }
@@ -160,6 +166,16 @@ struct AppTheme {
         static let buttonPress = Animation.easeIn(duration: durationXS)
         static let listTransition = Animation.easeInOut(duration: durationM)
         static let checkboxToggle = Animation.spring(response: 0.2, dampingFraction: 0.6)
+        
+        // Delayed animations
+        static func staggered(index: Int, baseDelay: Double = 0.05) -> Animation {
+            Animation.easeInOut(duration: 0.25).delay(Double(index) * baseDelay)
+        }
+        
+        // Complex animation sequences
+        static let slideInFromBottom = Animation.spring(response: 0.4, dampingFraction: 0.75)
+        static let fadeInSlowly = Animation.easeIn(duration: 0.5)
+        static let quickFadeOut = Animation.easeOut(duration: 0.15)
     }
 }
 
@@ -241,5 +257,79 @@ extension View {
                     .delay(delay),
                 value: UUID()
             )
+    }
+    
+    // Clean, minimal card style
+    func cardStyle(elevation: CGFloat = AppTheme.Dimensions.cardElevation) -> some View {
+        self
+            .background(AppTheme.Colors.cardSurface)
+            .cornerRadius(AppTheme.Dimensions.cornerRadius)
+            .shadow(color: AppTheme.Colors.cardShadow,
+                    radius: elevation,
+                    x: 0,
+                    y: elevation)
+    }
+    
+    // Enhanced card style with interactive feedback (Todoist-inspired)
+    func interactiveCardStyle(isPressed: Bool = false) -> some View {
+        self
+            .background(AppTheme.Colors.cardSurface)
+            .cornerRadius(AppTheme.Dimensions.radiusM)
+            .shadow(
+                color: AppTheme.Colors.cardShadow.opacity(isPressed ? 0.03 : 0.1),
+                radius: isPressed ? 1 : 3,
+                x: 0,
+                y: isPressed ? 1 : 2
+            )
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+    }
+    
+    // Custom pill-shaped tag style (Todoist-inspired)
+    func tagStyle(color: Color) -> some View {
+        self
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                Capsule()
+                    .fill(color.opacity(0.2))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(color.opacity(0.5), lineWidth: 1)
+            )
+    }
+    
+    // Primary button style (Todoist-inspired)
+    func primaryButtonStyle() -> some View {
+        self
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(AppTheme.Colors.primary)
+            .foregroundColor(AppTheme.Colors.textOnPrimary)
+            .cornerRadius(AppTheme.Dimensions.radiusM)
+            .shadow(
+                color: AppTheme.Colors.primary.opacity(0.3),
+                radius: 3,
+                x: 0,
+                y: 2
+            )
+    }
+    
+    // Accent button
+    func accentButtonStyle() -> some View {
+        self
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(AppTheme.Colors.accent)
+            .foregroundColor(.white)
+            .cornerRadius(AppTheme.Dimensions.radiusM)
+    }
+    
+    // Text button style
+    func textButtonStyle() -> some View {
+        self
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .foregroundColor(AppTheme.Colors.primary)
     }
 }

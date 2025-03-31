@@ -365,7 +365,10 @@ struct NoteEditorView: View {
                 .foregroundColor(AppTheme.Colors.textSecondary)
                 .padding(.horizontal, AppTheme.Dimensions.spacing)
             
-            TagSelectorView(selectedTagIDs: $tagIDs)
+            TagFilterView(selectedTagIds: Binding(
+                get: { Set(tagIDs) },
+                set: { tagIDs = Array($0) }
+            ))
                 .padding(.horizontal, AppTheme.Dimensions.spacing)
         }
     }

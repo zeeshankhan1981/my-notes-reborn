@@ -99,7 +99,7 @@ struct NoteListView: View {
                 }
                 
                 if showingTagFilter {
-                    TagFilterView(selectedTagIDs: $selectedTagIDs)
+                    TagFilterView(selectedTagIds: $selectedTagIDs)
                         .padding(.horizontal)
                         .padding(.top, showingTagFilter ? 8 : 0)
                         .transition(.move(edge: .top).combined(with: .opacity))
