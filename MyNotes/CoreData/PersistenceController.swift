@@ -26,12 +26,8 @@ struct PersistenceController {
             
             // Performance optimizations
             // Use SQLite WAL mode for better concurrency
-            let options = [
-                NSPersistentStoreConnectionPoolMaxSizeKey: NSNumber(integerLiteral: 10),
-                NSSQLitePragmasOption: ["journal_mode": "WAL"],
-                NSSQLiteAnalyzeOption: true
-            ]
-            description.setOption(options as NSDictionary, forKey: NSSQLiteStoreTypeOption)
+            let pragmaOptions: [String: String] = ["journal_mode": "WAL"]
+            description.setOption(pragmaOptions as NSDictionary, forKey: "NSPragmaOptions")
         }
         
         container.loadPersistentStores { description, error in
@@ -50,77 +46,22 @@ struct PersistenceController {
         container.viewContext.automaticallyMergesChangesFromParent = true
         
         // Add performance tuning for batch fetches
-        container.viewContext.shouldRefreshRefetchedObjects = false
         container.viewContext.stalenessInterval = 0.5
     }
     
-    // For saving context when needed
-    func save(_ context: NSManagedObjectContext? = nil) {
-        let context = context ?? container.viewContext
-        
-        // Only attempt to save if there are actual changes
-        guard context.hasChanges else {
-            print("PersistenceController: No changes to save")
-            return
-        }
-        
-        // Ensure we're on the right thread for this context
-        if context === container.viewContext && !Thread.isMainThread {
-            DispatchQueue.main.sync {
-                self.save(context)
-            }
-            return
-        }
-        
-        do {
-            try context.save()
-            print("PersistenceController: Successfully saved context changes")
-        } catch {
-            let nsError = error as NSError
-            print("PersistenceController: Failed to save context - \(nsError), \(nsError.userInfo)")
-            
-            // Provide more detailed error information
-            if let detailedErrors = nsError.userInfo[NSDetailedErrorsKey] as? [NSError] {
-                for detailedError in detailedErrors {
-                    print("PersistenceController: Detailed error - \(detailedError.localizedDescription)")
-                    print("PersistenceController: Error domain - \(detailedError.domain)")
-                    print("PersistenceController: Error user info - \(detailedError.userInfo)")
-                }
-            }
-            
-            #if DEBUG
-            assertionFailure("Unresolved error \(nsError), \(nsError.userInfo)")
-            #endif
-        }
-    }
+    // MARK: - Core Data Persistence
     
-    // Create a fetch request with optimization settings
-    func optimizedFetchRequest<T: NSManagedObject>(_ request: NSFetchRequest<T>) -> NSFetchRequest<T> {
-        // Clone the request to avoid modifying the original
-        let optimizedRequest = request.copy() as! NSFetchRequest<T>
+    func save() {
+        // Only save if there are changes
+        let context = container.viewContext
         
-        // Set batch size for better memory usage with large result sets
-        optimizedRequest.fetchBatchSize = 20
-        
-        // Only fetch the properties we need
-        if optimizedRequest.propertiesToFetch == nil {
-            // Keep existing properties if set
-            optimizedRequest.returnsObjectsAsFaults = false
-        }
-        
-        return optimizedRequest
-    }
-    
-    // Perform a fetch with optimized settings
-    func performOptimizedFetch<T: NSManagedObject>(_ request: NSFetchRequest<T>, in context: NSManagedObjectContext? = nil) -> [T] {
-        let context = context ?? container.viewContext
-        let optimizedRequest = optimizedFetchRequest(request)
-        
-        do {
-            return try context.fetch(optimizedRequest)
-        } catch {
-            print("Optimized fetch error: \(error)")
-            return []
+        if context.hasChanges {
+            do {
+                try context.save()
+                print("PersistenceController: Context saved successfully")
+            } catch {
+                print("PersistenceController: Error saving context: \(error)")
+            }
         }
     }
     

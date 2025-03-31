@@ -11,7 +11,7 @@ class TagStore: ObservableObject {
     init(persistence: PersistenceController = .shared) {
         self.persistence = persistence
         
-        loadTags()
+        loadTagsSync()
         
         // Set up notification to reload when Core Data changes
         NotificationCenter.default
@@ -22,6 +22,27 @@ class TagStore: ObservableObject {
             .store(in: &cancellables)
     }
     
+    // Synchronous loading for initialization
+    private func loadTagsSync() {
+        let context = persistence.container.viewContext
+        let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \CDTag.name, ascending: true)]
+        
+        do {
+            let cdTags = try context.fetch(request)
+            self.tags = cdTags.map { cdTag in
+                Tag(
+                    id: cdTag.id!,
+                    name: cdTag.name!,
+                    color: Tag.colorFromString(cdTag.color)
+                )
+            }
+        } catch {
+            print("Error loading tags: \(error)")
+        }
+    }
+    
+    // This needs to be a synchronous version, not async
     func loadTags() {
         let context = persistence.container.viewContext
         let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
@@ -41,64 +62,56 @@ class TagStore: ObservableObject {
         }
     }
     
+    // MARK: - Tag Operations
+
     func addTag(name: String, color: Color) -> Tag {
         let context = persistence.container.viewContext
-        let cdTag = CDTag(context: context)
         
         let newTag = Tag(name: name, color: color)
-        cdTag.id = newTag.id
-        cdTag.name = name
-        cdTag.color = newTag.colorString()
+        let newCDTag = CDTag(context: context)
+        newCDTag.id = newTag.id
+        newCDTag.name = name
+        newCDTag.color = newTag.colorString()
         
-        do {
-            try context.save()
-            loadTags()
-            return newTag
-        } catch {
-            print("Error saving tag: \(error)")
-            return newTag
-        }
+        persistence.save()
+        loadTags() // Reload tags after saving
+        return newTag
     }
     
-    func update(tag: Tag, name: String, color: Color) {
+    func updateTag(id: UUID, name: String, color: Color) {
         let context = persistence.container.viewContext
+        
         let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", tag.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         
         do {
-            if let cdTag = try context.fetch(request).first {
-                cdTag.name = name
-                cdTag.color = tag.colorString()
-                try context.save()
-                loadTags()
+            if let tag = try context.fetch(request).first {
+                tag.name = name
+                tag.color = color == .blue ? "blue" : (color == .red ? "red" : "green")
+                
+                persistence.save()
+                loadTags() // Reload tags after saving
             }
         } catch {
             print("Error updating tag: \(error)")
         }
     }
     
-    func delete(tag: Tag) {
+    func deleteTag(id: UUID) {
         let context = persistence.container.viewContext
+        
         let request: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", tag.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
         
         do {
-            if let cdTag = try context.fetch(request).first {
-                context.delete(cdTag)
-                try context.save()
-                loadTags()
+            if let tag = try context.fetch(request).first {
+                context.delete(tag)
+                persistence.save()
+                loadTags() // Reload tags after saving
             }
         } catch {
             print("Error deleting tag: \(error)")
         }
-    }
-    
-    func getTag(by id: UUID) -> Tag? {
-        return tags.first { $0.id == id }
-    }
-    
-    func getTagsByIDs(_ ids: [UUID]) -> [Tag] {
-        return tags.filter { ids.contains($0.id) }
     }
     
     // Helper functions for common tag operations
@@ -113,7 +126,7 @@ class TagStore: ObservableObject {
         do {
             if let cdTag = try context.fetch(tagRequest).first {
                 note.addToTags(cdTag)
-                try context.save()
+                persistence.save()
             }
         } catch {
             print("Error adding tag to note: \(error)")
@@ -130,7 +143,7 @@ class TagStore: ObservableObject {
         do {
             if let cdTag = try context.fetch(tagRequest).first {
                 note.removeFromTags(cdTag)
-                try context.save()
+                persistence.save()
             }
         } catch {
             print("Error removing tag from note: \(error)")
@@ -147,7 +160,7 @@ class TagStore: ObservableObject {
         do {
             if let cdTag = try context.fetch(tagRequest).first {
                 checklist.addToTags(cdTag)
-                try context.save()
+                persistence.save()
             }
         } catch {
             print("Error adding tag to checklist: \(error)")
@@ -164,7 +177,7 @@ class TagStore: ObservableObject {
         do {
             if let cdTag = try context.fetch(tagRequest).first {
                 checklist.removeFromTags(cdTag)
-                try context.save()
+                persistence.save()
             }
         } catch {
             print("Error removing tag from checklist: \(error)")
@@ -207,5 +220,13 @@ class TagStore: ObservableObject {
         }
         
         return []
+    }
+    
+    func getTag(by id: UUID) -> Tag? {
+        return tags.first { $0.id == id }
+    }
+    
+    func getTagsByIDs(_ ids: [UUID]) -> [Tag] {
+        return tags.filter { ids.contains($0.id) }
     }
 }

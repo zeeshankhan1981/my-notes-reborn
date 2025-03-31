@@ -12,12 +12,10 @@ class ChecklistStore: ObservableObject {
     init() {
         print("ChecklistStore: Initializing")
         
-        // Load data asynchronously to avoid UI blocking
-        Task {
-            await loadChecklistsAsync()
-            setupObservers()
-            ensureTestData()
-        }
+        // Initialize with synchronous loading for init
+        loadChecklistsSync()
+        setupObservers()
+        ensureTestData()
     }
     
     private func setupObservers() {
@@ -27,40 +25,55 @@ class ChecklistStore: ObservableObject {
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main) // Debounce to avoid rapid reloads
             .sink { [weak self] _ in
                 print("ChecklistStore: Core Data context saved, reloading checklists")
-                Task {
-                    await self?.loadChecklistsAsync()
-                }
+                self?.loadChecklistsSync() // Use sync to avoid potential deadlock
             }
             .store(in: &cancellables)
     }
     
-    // Asynchronous loading to avoid blocking the UI
-    @MainActor
-    func loadChecklistsAsync() async {
-        print("ChecklistStore: Loading checklists from Core Data asynchronously")
-        isLoading = true
-        
+    // Synchronous loading method for initialization only
+    private func loadChecklistsSync() {
+        print("ChecklistStore: Loading checklists synchronously")
         let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \CDChecklistNote.date, ascending: false)]
         
-        // Load on background thread
-        let loadedChecklists = await Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self = self else { return [] }
-            
-            let cdChecklists = self.persistence.performOptimizedFetch(request)
-            return cdChecklists.map { $0.toDomainModel() }
-        }.value
-        
-        // Update on main thread
-        self.checklists = loadedChecklists
-        isLoading = false
-        print("ChecklistStore: Successfully loaded \(self.checklists.count) checklists")
+        do {
+            let cdChecklists = try persistence.container.viewContext.fetch(request)
+            self.checklists = cdChecklists.map { $0.toDomainModel() }
+            print("ChecklistStore: Successfully loaded \(self.checklists.count) checklists synchronously")
+        } catch {
+            print("ChecklistStore: Error fetching checklists: \(error)")
+        }
     }
     
-    // The original sync loading method (kept for compatibility)
+    // Public loading method that updates the UI
     func loadChecklists() {
-        Task {
-            await loadChecklistsAsync()
+        isLoading = true
+        
+        // Start a background task to avoid blocking the UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Create a fetch request
+            let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \CDChecklistNote.date, ascending: false)]
+            
+            do {
+                // Fetch on the main context
+                let cdChecklists = try self.persistence.container.viewContext.fetch(request)
+                let mappedChecklists = cdChecklists.map { $0.toDomainModel() }
+                
+                // Update UI on the main thread
+                DispatchQueue.main.async {
+                    self.checklists = mappedChecklists
+                    self.isLoading = false
+                    print("ChecklistStore: Successfully loaded \(self.checklists.count) checklists")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("ChecklistStore: Error loading checklists: \(error)")
+                    self.isLoading = false
+                }
+            }
         }
     }
 
@@ -124,20 +137,18 @@ class ChecklistStore: ObservableObject {
         // Create Core Data entity from domain model
         _ = CDChecklistNote.fromDomainModel(newChecklist, in: context)
         
-        // Save synchronously to ensure the checklist is persisted immediately
-        saveContext()
+        // Save context
+        persistence.save()
         
         // Reload to reflect changes in the UI
-        DispatchQueue.main.async {
-            self.loadChecklists()
-        }
+        loadChecklistsSync()
     }
     
     private func saveChecklist(_ checklist: ChecklistNote) {
         print("ChecklistStore: Saving checklist '\(checklist.title)'")
         let context = persistence.container.viewContext
         _ = CDChecklistNote.fromDomainModel(checklist, in: context)
-        saveContext()
+        persistence.save()
     }
 
     func updateChecklist(checklist: ChecklistNote) {
@@ -145,13 +156,11 @@ class ChecklistStore: ObservableObject {
         let context = persistence.container.viewContext
         _ = CDChecklistNote.fromDomainModel(checklist, in: context)
         
-        // Save synchronously to ensure the checklist is persisted immediately
-        saveContext()
+        // Save context
+        persistence.save()
         
         // Reload to reflect changes in the UI
-        DispatchQueue.main.async {
-            self.loadChecklists()
-        }
+        loadChecklistsSync()
     }
     
     func updateChecklist(checklist: ChecklistNote, title: String, items: [ChecklistItem], folderID: UUID?, tagIDs: [UUID] = []) {
@@ -175,13 +184,13 @@ class ChecklistStore: ObservableObject {
         do {
             if let checklistToDelete = try context.fetch(request).first {
                 context.delete(checklistToDelete)
-                saveContext()
+                persistence.save()
             }
         } catch {
             print("Error deleting checklist: \(error)")
         }
         
-        loadChecklists()
+        loadChecklistsSync()
     }
 
     func togglePin(checklist: ChecklistNote) {
@@ -191,24 +200,11 @@ class ChecklistStore: ObservableObject {
         
         _ = CDChecklistNote.fromDomainModel(updatedChecklist, in: context)
         
-        saveContext()
-        loadChecklists()
+        persistence.save()
+        loadChecklistsSync()
     }
     
     func getChecklist(id: UUID) -> ChecklistNote? {
         return checklists.first { $0.id == id }
-    }
-
-    private func saveContext() {
-        print("ChecklistStore: Saving Core Data context")
-        
-        // Ensure we're on the main thread when saving the view context
-        if Thread.isMainThread {
-            persistence.save()
-        } else {
-            DispatchQueue.main.sync {
-                persistence.save()
-            }
-        }
     }
 }

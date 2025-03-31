@@ -97,36 +97,44 @@ struct AppTheme {
         }
         
         static func title() -> Font {
-            return Font.system(size: 22, weight: .medium)
+            return Font.system(size: 22, weight: .bold)
         }
         
         static func title2() -> Font {
-            return Font.system(size: 21, weight: .medium)
+            return Font.system(size: 20, weight: .bold)
         }
         
         static func title3() -> Font {
-            return Font.system(size: 20, weight: .medium)
+            return Font.system(size: 18, weight: .semibold)
         }
         
         static func headline() -> Font {
-            return Font.system(size: 17, weight: .semibold)
+            return Font.system(size: 16, weight: .semibold)
         }
         
         static func subheadline() -> Font {
-            return Font.system(size: 15, weight: .regular)
+            return Font.system(size: 14, weight: .semibold)
         }
         
-        // Core typography - monospaced for content
         static func body() -> Font {
-            return Font.system(size: 16)
+            return Font.system(size: 16, weight: .regular)
         }
         
-        static func bodyMono() -> Font {
-            return Font.monospaced(Font.system(size: 16))()
+        static func bodyCompact() -> Font {
+            return Font.system(size: 14, weight: .regular)
+        }
+        
+        static func footnote() -> Font {
+            return Font.system(size: 12, weight: .regular)
         }
         
         static func caption() -> Font {
-            return Font.system(size: 13)
+            return Font.system(size: 10, weight: .regular)
+        }
+        
+        // Core typography - monospaced for content
+        static func bodyMono() -> Font {
+            return Font.monospaced(Font.system(size: 16))()
         }
         
         // Editor typography - fully monospaced

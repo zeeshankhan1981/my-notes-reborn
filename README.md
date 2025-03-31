@@ -44,6 +44,24 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Local data storage
   - Automatic backups
 
+## Technical Architecture
+
+### Performance Optimizations
+- **Core Data**:
+  - Optimized data persistence with reliable saving mechanisms
+  - Implemented efficient background operations
+  - Reduced memory usage through optimized data handling
+
+- **UI/UX**:
+  - Smooth animations and transitions
+  - Efficient keyboard handling
+  - Responsive layout across all devices
+
+- **Code Structure**:
+  - Clean separation of concerns
+  - Efficient state management
+  - Optimized view hierarchies
+
 ## Development Status
 
 The app is currently in active development. Key features are implemented and stable, but some planned features are still pending implementation:
@@ -54,27 +72,26 @@ The app is currently in active development. Key features are implemented and sta
 - Sharing and export features
 - Quick actions and gestures
 
-## Installation
-
-1. Clone the repository
-2. Open `MyNotes.xcodeproj` in Xcode
-3. Build and run the project
-
-## Requirements
-
-- iOS 15.0+
-- Xcode 13.0+
-- Swift 5.5+
-
-## Contributing
-
-Feel free to submit issues and enhancement requests!
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Version History
+
+### v0.2.4 (2025-03-31)
+- **Performance Improvements**:
+  - Fixed app freezing issues by optimizing Core Data operations
+  - Implemented efficient background processing
+  - Improved UI responsiveness
+  - Reduced memory usage
+
+- **Technical Enhancements**:
+  - Simplified persistence controller architecture
+  - Optimized data loading mechanisms
+  - Improved keyboard handling in editors
+  - Enhanced code organization
+
+- **UI/UX Improvements**:
+  - Smoother animations and transitions
+  - Better keyboard dismissal handling
+  - Improved visual feedback
+  - Enhanced error handling
 
 ### v0.2.3 (2025-03-31)
 - Streamlined search experience:
@@ -154,3 +171,57 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Core Data integration
 - Basic UI components
 - Folder management system
+
+## Technical Requirements
+
+### Core Data
+- Optimized data model for efficient storage
+- Reliable saving mechanisms
+- Efficient background operations
+- Proper error handling
+
+### UI Components
+- Custom text editor with rich text capabilities
+- Efficient list views with swipe actions
+- Optimized search interface
+- Responsive layout system
+
+### Performance Considerations
+- Memory usage optimization
+- Thread management for UI responsiveness
+- Efficient data operations
+- Smooth animations and transitions
+
+## Development Guidelines
+
+### Code Organization
+- Follow MVVM architecture pattern
+- Use proper state management
+- Implement efficient data operations
+- Maintain clean UI components
+
+### Performance Best Practices
+- Optimize Core Data operations
+- Use efficient background processing
+- Implement proper memory management
+- Maintain responsive UI updates
+
+## Installation
+
+1. Clone the repository
+2. Open `MyNotes.xcodeproj` in Xcode
+3. Build and run the project
+
+## Requirements
+
+- iOS 15.0+
+- Xcode 13.0+
+- Swift 5.5+
+
+## Contributing
+
+Feel free to submit issues and enhancement requests!
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

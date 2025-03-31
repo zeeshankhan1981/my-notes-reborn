@@ -81,7 +81,9 @@ struct NoteListView: View {
                     NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleNotePin"), object: nil, queue: .main) { notification in
                         if let noteID = notification.object as? UUID,
                            let note = noteStore.notes.first(where: { $0.id == noteID }) {
-                            noteStore.togglePin(note: note)
+                            Task {
+                                await noteStore.togglePin(note: note)
+                            }
                         }
                     }
                 }
@@ -132,15 +134,7 @@ struct NoteListView: View {
         }
         .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
-                for id in selectedNotes {
-                    if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
-                        noteStore.delete(note: noteToDelete)
-                    }
-                }
-                
-                // Exit selection mode
-                isSelectionMode = false
-                selectedNotes.removeAll()
+                deleteSelectedNotes()
             }
             
             Button("Cancel", role: .cancel) {}
@@ -167,6 +161,23 @@ struct NoteListView: View {
                     ForEach(pinnedNotes) { note in
                         noteCardView(for: note)
                             .padding(.horizontal)
+                            .contextMenu {
+                                Button(action: {
+                                    Task {
+                                        await noteStore.togglePin(note: note)
+                                    }
+                                }) {
+                                    Label(note.isPinned ? "Unpin" : "Pin", systemImage: note.isPinned ? "pin.slash" : "pin.fill")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    Task {
+                                        await noteStore.delete(note: note)
+                                    }
+                                }) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
                 
@@ -181,12 +192,34 @@ struct NoteListView: View {
                     ForEach(unpinnedNotes) { note in
                         noteCardView(for: note)
                             .padding(.horizontal)
+                            .contextMenu {
+                                Button(action: {
+                                    Task {
+                                        await noteStore.togglePin(note: note)
+                                    }
+                                }) {
+                                    Label(note.isPinned ? "Unpin" : "Pin", systemImage: note.isPinned ? "pin.slash" : "pin.fill")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    Task {
+                                        await noteStore.delete(note: note)
+                                    }
+                                }) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
                 
                 // Add some spacing at the bottom
                 Spacer(minLength: 60)
             }
+        }
+        .refreshable { 
+            // Using SwiftUI's built-in refreshable
+            try? await Task.sleep(nanoseconds: 250_000_000) // 0.25 seconds for visual feedback
+            noteStore.loadNotes()
         }
         .scrollDismissesKeyboard(.immediately)
     }
@@ -345,7 +378,9 @@ struct NoteListView: View {
                 }
             },
             onDelete: {
-                noteStore.delete(note: note)
+                Task {
+                    await noteStore.delete(note: note)
+                }
             },
             onLongPress: {
                 handleLongPress(for: note)
@@ -357,20 +392,26 @@ struct NoteListView: View {
         .contextMenu {
             if note.isPinned {
                 Button {
-                    noteStore.togglePin(note: note)
+                    Task {
+                        await noteStore.togglePin(note: note)
+                    }
                 } label: {
                     Label("Unpin", systemImage: "pin.slash")
                 }
             } else {
                 Button {
-                    noteStore.togglePin(note: note)
+                    Task {
+                        await noteStore.togglePin(note: note)
+                    }
                 } label: {
                     Label("Pin", systemImage: "pin")
                 }
             }
             
             Button(role: .destructive) {
-                noteStore.delete(note: note)
+                Task {
+                    await noteStore.delete(note: note)
+                }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -415,16 +456,18 @@ struct NoteListView: View {
         let notesToDelete = selectedNotes
         
         // Delete the notes
-        for id in notesToDelete {
-            if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
-                noteStore.delete(note: noteToDelete)
+        Task {
+            for id in notesToDelete {
+                if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
+                    await noteStore.delete(note: noteToDelete)
+                }
             }
-        }
-        
-        // Clear selection and exit selection mode
-        selectedNotes.removeAll()
-        withAnimation {
-            isSelectionMode = false
+            
+            // Clear selection and exit selection mode
+            withAnimation {
+                isSelectionMode = false
+                selectedNotes.removeAll()
+            }
         }
     }
     
@@ -476,5 +519,36 @@ struct NoteListView: View {
         }
         .background(AppTheme.Colors.secondaryBackground)
         .transition(.move(edge: .top).combined(with: .opacity))
+    }
+    
+    private var tagFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(selectedTagIDs), id: \.self) { tagID in
+                    if let tag = tagStore.getTag(by: tagID) {
+                        TagChip(tag: tag, isSelected: true)
+                            .onTapGesture {
+                                selectedTagIDs.remove(tagID)
+                            }
+                    }
+                }
+                
+                Button(action: {
+                    showingTagFilter = false
+                    selectedTagIDs.removeAll()
+                }) {
+                    Text("Clear All")
+                        .font(AppTheme.Typography.footnote())
+                        .foregroundColor(AppTheme.Colors.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .strokeBorder(AppTheme.Colors.accent.opacity(0.5), lineWidth: 1)
+                        )
+                }
+            }
+            .padding(.vertical, 4)
+        }
     }
 }

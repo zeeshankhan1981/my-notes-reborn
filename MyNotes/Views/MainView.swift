@@ -11,6 +11,14 @@ struct MainView: View {
         print("MainView initialized")
     }
     
+    // Refresh function to reload data in both stores
+    private func refreshData() {
+        Task {
+            await noteStore.loadNotes()
+            await checklistStore.loadChecklists()
+        }
+    }
+    
     var body: some View {
         TabView {
             NoteListView()

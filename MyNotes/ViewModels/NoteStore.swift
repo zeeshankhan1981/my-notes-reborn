@@ -12,12 +12,10 @@ class NoteStore: ObservableObject {
     init() {
         print("NoteStore: Initializing")
         
-        // Load data asynchronously to avoid UI blocking
-        Task {
-            await loadNotesAsync()
-            setupObservers()
-            ensureTestData()
-        }
+        // Initialize with synchronous loading for init
+        loadNotesSync()
+        setupObservers()
+        ensureTestData()
     }
     
     private func setupObservers() {
@@ -27,40 +25,55 @@ class NoteStore: ObservableObject {
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main) // Debounce to avoid rapid reloads
             .sink { [weak self] _ in
                 print("NoteStore: Core Data context saved, reloading notes")
-                Task { 
-                    await self?.loadNotesAsync()
-                }
+                self?.loadNotesSync() // Use sync to avoid potential deadlock
             }
             .store(in: &cancellables)
     }
     
-    // Asynchronous loading to avoid blocking the UI
-    @MainActor
-    func loadNotesAsync() async {
-        print("NoteStore: Loading notes from Core Data asynchronously")
-        isLoading = true
-        
+    // Synchronous loading method for initialization only
+    private func loadNotesSync() {
+        print("NoteStore: Loading notes synchronously")
         let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \CDNote.date, ascending: false)]
         
-        // Load on background thread
-        let loadedNotes = await Task.detached(priority: .userInitiated) { [weak self] in
-            guard let self = self else { return [] }
-            
-            let cdNotes = self.persistence.performOptimizedFetch(request)
-            return cdNotes.map { $0.toDomainModel() }
-        }.value
-        
-        // Update on main thread
-        self.notes = loadedNotes
-        isLoading = false
-        print("NoteStore: Successfully loaded \(self.notes.count) notes")
+        do {
+            let cdNotes = try persistence.container.viewContext.fetch(request)
+            self.notes = cdNotes.map { $0.toDomainModel() }
+            print("NoteStore: Successfully loaded \(self.notes.count) notes synchronously")
+        } catch {
+            print("NoteStore: Error fetching notes: \(error)")
+        }
     }
     
-    // The original sync loading method (kept for compatibility)
+    // Public loading method that updates the UI
     func loadNotes() {
-        Task {
-            await loadNotesAsync()
+        isLoading = true
+        
+        // Start a background task to avoid blocking the UI
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            // Create a fetch request
+            let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \CDNote.date, ascending: false)]
+            
+            do {
+                // Fetch on the main context
+                let cdNotes = try self.persistence.container.viewContext.fetch(request)
+                let mappedNotes = cdNotes.map { $0.toDomainModel() }
+                
+                // Update UI on the main thread
+                DispatchQueue.main.async {
+                    self.notes = mappedNotes
+                    self.isLoading = false
+                    print("NoteStore: Successfully loaded \(self.notes.count) notes")
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("NoteStore: Error loading notes: \(error)")
+                    self.isLoading = false
+                }
+            }
         }
     }
     
@@ -118,13 +131,11 @@ class NoteStore: ObservableObject {
         // Create Core Data entity from domain model
         _ = CDNote.fromDomainModel(newNote, in: context)
         
-        // Save synchronously to ensure the note is persisted immediately
-        saveContext()
+        // Save context
+        persistence.save()
         
         // Reload to reflect changes in the UI
-        DispatchQueue.main.async {
-            self.loadNotes()
-        }
+        loadNotesSync()
     }
     
     func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
@@ -143,13 +154,11 @@ class NoteStore: ObservableObject {
         // Create/update Core Data entity from domain model
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         
-        // Save synchronously to ensure the note is persisted immediately
-        saveContext()
+        // Save context
+        persistence.save()
         
         // Reload to reflect changes in the UI
-        DispatchQueue.main.async {
-            self.loadNotes()
-        }
+        loadNotesSync()
     }
     
     func delete(note: Note) {
@@ -160,13 +169,13 @@ class NoteStore: ObservableObject {
         do {
             if let noteToDelete = try context.fetch(request).first {
                 context.delete(noteToDelete)
-                saveContext()
+                persistence.save()
             }
         } catch {
             print("Error deleting note: \(error)")
         }
         
-        loadNotes()
+        loadNotesSync()
     }
     
     func togglePin(note: Note) {
@@ -176,30 +185,17 @@ class NoteStore: ObservableObject {
         
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         
-        saveContext()
-        loadNotes()
+        persistence.save()
+        loadNotesSync()
     }
     
     func getNote(id: UUID) -> Note? {
         return notes.first { $0.id == id }
     }
     
-    private func saveContext() {
-        print("NoteStore: Saving Core Data context")
-        
-        // Ensure we're on the main thread when saving the view context
-        if Thread.isMainThread {
-            persistence.save()
-        } else {
-            DispatchQueue.main.sync {
-                persistence.save()
-            }
-        }
-    }
-    
     private func saveNote(_ note: Note) {
         let context = persistence.container.viewContext
         _ = CDNote.fromDomainModel(note, in: context)
-        saveContext()
+        persistence.save()
     }
 }

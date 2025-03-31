@@ -100,8 +100,12 @@ struct NoteEditorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                CancelButton {
+                Button(action: {
+                    // Dismiss without saving
                     dismiss()
+                }) {
+                    Text("Cancel")
+                        .foregroundColor(AppTheme.Colors.textPrimary)
                 }
             }
             
@@ -112,7 +116,9 @@ struct NoteEditorView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                SaveButton {
+                Button("Done") {
+                    // Dismiss keyboard using standard method
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     saveNote()
                     dismiss()
                 }

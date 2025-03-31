@@ -195,6 +195,7 @@ struct TagFilterView: View {
     
     private func toggleTag(_ tag: Tag) {
         withAnimation {
+            // Easy toggle using Set operations
             if selectedTagIds.contains(tag.id) {
                 selectedTagIds.remove(tag.id)
             } else {

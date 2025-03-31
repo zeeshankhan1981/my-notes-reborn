@@ -92,7 +92,9 @@ struct ChecklistListView: View {
                     NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleChecklistPin"), object: nil, queue: .main) { notification in
                         if let checklistID = notification.object as? UUID,
                            let checklist = checklistStore.checklists.first(where: { $0.id == checklistID }) {
-                            checklistStore.togglePin(checklist: checklist)
+                            Task {
+                                await checklistStore.togglePin(checklist: checklist)
+                            }
                         }
                     }
                     
@@ -107,7 +109,9 @@ struct ChecklistListView: View {
                                 updatedChecklist.items[i].isDone = !allDone
                             }
                             
-                            checklistStore.updateChecklist(checklist: updatedChecklist)
+                            Task {
+                                await checklistStore.updateChecklist(checklist: updatedChecklist)
+                            }
                             
                             let generator = UINotificationFeedbackGenerator()
                             generator.notificationOccurred(.success)
@@ -179,6 +183,23 @@ struct ChecklistListView: View {
                     ForEach(pinnedChecklists) { checklist in
                         checklistCardView(for: checklist)
                             .padding(.horizontal)
+                            .contextMenu {
+                                Button(action: {
+                                    Task {
+                                        await checklistStore.togglePin(checklist: checklist)
+                                    }
+                                }) {
+                                    Label(checklist.isPinned ? "Unpin" : "Pin", systemImage: checklist.isPinned ? "pin.slash" : "pin.fill")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    Task {
+                                        await checklistStore.delete(checklist: checklist)
+                                    }
+                                }) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
                 
@@ -193,12 +214,34 @@ struct ChecklistListView: View {
                     ForEach(unpinnedChecklists) { checklist in
                         checklistCardView(for: checklist)
                             .padding(.horizontal)
+                            .contextMenu {
+                                Button(action: {
+                                    Task {
+                                        await checklistStore.togglePin(checklist: checklist)
+                                    }
+                                }) {
+                                    Label(checklist.isPinned ? "Unpin" : "Pin", systemImage: checklist.isPinned ? "pin.slash" : "pin.fill")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    Task {
+                                        await checklistStore.delete(checklist: checklist)
+                                    }
+                                }) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                     }
                 }
                 
                 // Add some spacing at the bottom
                 Spacer(minLength: 60)
             }
+        }
+        .refreshable { 
+            // Using SwiftUI's built-in refreshable
+            try? await Task.sleep(nanoseconds: 250_000_000) // 0.25 seconds for visual feedback
+            checklistStore.loadChecklists()
         }
         .scrollDismissesKeyboard(.immediately)
         .opacity(animateListAppearance ? 1 : 0)
@@ -211,64 +254,35 @@ struct ChecklistListView: View {
         }
     }
     
-    private var selectionToolbar: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Cancel") {
-                    withAnimation(AppTheme.Animations.standardCurve) {
-                        isSelectionMode = false
-                        selectedChecklists.removeAll()
+    private var tagFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(selectedTagIDs), id: \.self) { tagID in
+                    if let tag = tagStore.getTag(by: tagID) {
+                        TagChip(tag: tag, isSelected: true)
+                            .onTapGesture {
+                                selectedTagIDs.remove(tagID)
+                            }
                     }
                 }
-                .foregroundColor(AppTheme.Colors.primary)
                 
-                Spacer()
-                
-                Text("\(selectedChecklists.count) selected")
-                    .font(AppTheme.Typography.body())
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-                
-                Spacer()
-                
-                Button("Select All") {
-                    withAnimation(AppTheme.Animations.standardCurve) {
-                        selectedChecklists = Set(filteredChecklists.map { $0.id })
-                    }
-                }
-                .foregroundColor(AppTheme.Colors.primary)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
-            
-            if !selectedChecklists.isEmpty {
                 Button(action: {
-                    isShowingDeleteConfirmation = true
+                    showingTagFilter = false
+                    selectedTagIDs.removeAll()
                 }) {
-                    HStack {
-                        Image(systemName: "trash")
-                        Text("Delete Selected")
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal)
-                    .background(AppTheme.Colors.error)
-                    .cornerRadius(AppTheme.Dimensions.radiusM)
-                    .padding(.horizontal)
+                    Text("Clear All")
+                        .font(AppTheme.Typography.footnote())
+                        .foregroundColor(AppTheme.Colors.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .strokeBorder(AppTheme.Colors.accent.opacity(0.5), lineWidth: 1)
+                        )
                 }
-                .buttonStyle(PressableButtonStyle())
             }
+            .padding(.vertical, 4)
         }
-        .background(colorScheme == .dark ? 
-            AppTheme.Colors.cardSurface.opacity(0.9) : 
-            AppTheme.Colors.secondaryBackground.opacity(0.9))
-        .shadow(
-            color: AppTheme.Colors.cardShadow.opacity(0.1),
-            radius: 3,
-            x: 0,
-            y: 2
-        )
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
     
     private var searchBar: some View {
@@ -493,8 +507,8 @@ struct ChecklistListView: View {
                 }
             },
             onDelete: {
-                withAnimation(AppTheme.Animations.standardCurve) {
-                    checklistStore.delete(checklist: checklist)
+                Task {
+                    await checklistStore.delete(checklist: checklist)
                 }
             },
             onLongPress: {
@@ -507,20 +521,26 @@ struct ChecklistListView: View {
         .contextMenu {
             if checklist.isPinned {
                 Button {
-                    checklistStore.togglePin(checklist: checklist)
+                    Task {
+                        await checklistStore.togglePin(checklist: checklist)
+                    }
                 } label: {
                     Label("Unpin", systemImage: "pin.slash")
                 }
             } else {
                 Button {
-                    checklistStore.togglePin(checklist: checklist)
+                    Task {
+                        await checklistStore.togglePin(checklist: checklist)
+                    }
                 } label: {
                     Label("Pin", systemImage: "pin")
                 }
             }
             
             Button(role: .destructive) {
-                checklistStore.delete(checklist: checklist)
+                Task {
+                    await checklistStore.delete(checklist: checklist)
+                }
             } label: {
                 Label("Delete", systemImage: "trash")
             }
@@ -569,16 +589,78 @@ struct ChecklistListView: View {
         let checklistsToDelete = selectedChecklists
         
         // Delete the checklists
-        for id in checklistsToDelete {
-            if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
-                checklistStore.delete(checklist: checklistToDelete)
+        Task {
+            for id in checklistsToDelete {
+                if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
+                    await checklistStore.delete(checklist: checklistToDelete)
+                }
+            }
+            
+            // Clear selection and exit selection mode
+            withAnimation {
+                isSelectionMode = false
+                selectedChecklists.removeAll()
             }
         }
-        
-        // Clear selection and exit selection mode
-        selectedChecklists.removeAll()
-        withAnimation(AppTheme.Animations.standardCurve) {
-            isSelectionMode = false
+    }
+    
+    private var selectionToolbar: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") {
+                    withAnimation(AppTheme.Animations.standardCurve) {
+                        isSelectionMode = false
+                        selectedChecklists.removeAll()
+                    }
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+                
+                Spacer()
+                
+                Text("\(selectedChecklists.count) selected")
+                    .font(AppTheme.Typography.body())
+                    .foregroundColor(AppTheme.Colors.textPrimary)
+                
+                Spacer()
+                
+                Button("Select All") {
+                    withAnimation(AppTheme.Animations.standardCurve) {
+                        selectedChecklists = Set(filteredChecklists.map { $0.id })
+                    }
+                }
+                .foregroundColor(AppTheme.Colors.primary)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+            
+            if !selectedChecklists.isEmpty {
+                Button(action: {
+                    isShowingDeleteConfirmation = true
+                }) {
+                    HStack {
+                        Image(systemName: "trash")
+                        Text("Delete Selected")
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal)
+                    .background(AppTheme.Colors.error)
+                    .cornerRadius(AppTheme.Dimensions.radiusM)
+                    .padding(.horizontal)
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
         }
+        .background(colorScheme == .dark ? 
+            AppTheme.Colors.cardSurface.opacity(0.9) : 
+            AppTheme.Colors.secondaryBackground.opacity(0.9))
+        .shadow(
+            color: AppTheme.Colors.cardShadow.opacity(0.1),
+            radius: 3,
+            x: 0,
+            y: 2
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
     }
 }
