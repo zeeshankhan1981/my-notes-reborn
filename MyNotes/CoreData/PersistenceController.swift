@@ -44,16 +44,40 @@ struct PersistenceController {
     // For saving context when needed
     func save(_ context: NSManagedObjectContext? = nil) {
         let context = context ?? container.viewContext
-        if context.hasChanges {
-            do {
-                try context.save()
-            } catch {
-                let nsError = error as NSError
-                print("Unresolved error \(nsError), \(nsError.userInfo)")
-                #if DEBUG
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-                #endif
+        
+        // Only attempt to save if there are actual changes
+        guard context.hasChanges else {
+            print("PersistenceController: No changes to save")
+            return
+        }
+        
+        // Ensure we're on the right thread for this context
+        if context === container.viewContext && !Thread.isMainThread {
+            DispatchQueue.main.sync {
+                self.save(context)
             }
+            return
+        }
+        
+        do {
+            try context.save()
+            print("PersistenceController: Successfully saved context changes")
+        } catch {
+            let nsError = error as NSError
+            print("PersistenceController: Failed to save context - \(nsError), \(nsError.userInfo)")
+            
+            // Provide more detailed error information
+            if let detailedErrors = nsError.userInfo[NSDetailedErrorsKey] as? [NSError] {
+                for detailedError in detailedErrors {
+                    print("PersistenceController: Detailed error - \(detailedError.localizedDescription)")
+                    print("PersistenceController: Error domain - \(detailedError.domain)")
+                    print("PersistenceController: Error user info - \(detailedError.userInfo)")
+                }
+            }
+            
+            #if DEBUG
+            assertionFailure("Unresolved error \(nsError), \(nsError.userInfo)")
+            #endif
         }
     }
     

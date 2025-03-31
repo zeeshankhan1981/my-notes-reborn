@@ -85,6 +85,8 @@ class ChecklistStore: ObservableObject {
     }
 
     func addChecklist(title: String, folderID: UUID?, tagIDs: [UUID] = []) {
+        print("ChecklistStore: Adding new checklist with title '\(title)'")
+        
         let context = persistence.container.viewContext
         let newChecklist = ChecklistNote(
             id: UUID(), 
@@ -96,10 +98,16 @@ class ChecklistStore: ObservableObject {
             tagIDs: tagIDs
         )
         
+        // Create Core Data entity from domain model
         _ = CDChecklistNote.fromDomainModel(newChecklist, in: context)
         
+        // Save synchronously to ensure the checklist is persisted immediately
         saveContext()
-        loadChecklists()
+        
+        // Reload to reflect changes in the UI
+        DispatchQueue.main.async {
+            self.loadChecklists()
+        }
     }
     
     private func saveChecklist(_ checklist: ChecklistNote) {
@@ -113,11 +121,19 @@ class ChecklistStore: ObservableObject {
         print("ChecklistStore: Updating checklist '\(checklist.title)'")
         let context = persistence.container.viewContext
         _ = CDChecklistNote.fromDomainModel(checklist, in: context)
+        
+        // Save synchronously to ensure the checklist is persisted immediately
         saveContext()
-        loadChecklists()
+        
+        // Reload to reflect changes in the UI
+        DispatchQueue.main.async {
+            self.loadChecklists()
+        }
     }
     
     func updateChecklist(checklist: ChecklistNote, title: String, items: [ChecklistItem], folderID: UUID?, tagIDs: [UUID] = []) {
+        print("ChecklistStore: Updating checklist '\(checklist.id)' with title '\(title)'")
+        
         var updatedChecklist = checklist
         updatedChecklist.title = title
         updatedChecklist.items = items
@@ -161,6 +177,15 @@ class ChecklistStore: ObservableObject {
     }
 
     private func saveContext() {
-        persistence.save()
+        print("ChecklistStore: Saving Core Data context")
+        
+        // Ensure we're on the main thread when saving the view context
+        if Thread.isMainThread {
+            persistence.save()
+        } else {
+            DispatchQueue.main.sync {
+                persistence.save()
+            }
+        }
     }
 }

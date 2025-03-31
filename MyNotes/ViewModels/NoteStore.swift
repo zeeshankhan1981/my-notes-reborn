@@ -78,6 +78,8 @@ class NoteStore: ObservableObject {
     }
     
     func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
+        print("NoteStore: Adding new note with title '\(title)'")
+        
         let context = persistence.container.viewContext
         let newNote = Note(
             id: UUID(), 
@@ -91,13 +93,21 @@ class NoteStore: ObservableObject {
             tagIDs: tagIDs
         )
         
+        // Create Core Data entity from domain model
         _ = CDNote.fromDomainModel(newNote, in: context)
         
+        // Save synchronously to ensure the note is persisted immediately
         saveContext()
-        loadNotes()
+        
+        // Reload to reflect changes in the UI
+        DispatchQueue.main.async {
+            self.loadNotes()
+        }
     }
     
     func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
+        print("NoteStore: Updating note '\(note.id)' with title '\(title)'")
+        
         let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.title = title
@@ -108,10 +118,16 @@ class NoteStore: ObservableObject {
         updatedNote.attributedContent = attributedContent
         updatedNote.tagIDs = tagIDs
         
+        // Create/update Core Data entity from domain model
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         
+        // Save synchronously to ensure the note is persisted immediately
         saveContext()
-        loadNotes()
+        
+        // Reload to reflect changes in the UI
+        DispatchQueue.main.async {
+            self.loadNotes()
+        }
     }
     
     func delete(note: Note) {
@@ -147,7 +163,16 @@ class NoteStore: ObservableObject {
     }
     
     private func saveContext() {
-        persistence.save()
+        print("NoteStore: Saving Core Data context")
+        
+        // Ensure we're on the main thread when saving the view context
+        if Thread.isMainThread {
+            persistence.save()
+        } else {
+            DispatchQueue.main.sync {
+                persistence.save()
+            }
+        }
     }
     
     private func saveNote(_ note: Note) {
