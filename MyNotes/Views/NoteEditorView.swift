@@ -24,6 +24,7 @@ struct NoteEditorView: View {
     @State private var tagIDs = [UUID]()
     @State private var isShowingFormatting = false
     @State private var isFocusMode = false
+    @State private var isShowingDeleteConfirmation = false
     
     // Original initializer for backward compatibility
     init(mode: NoteEditorMode, existingNote: Note?) {
@@ -112,11 +113,38 @@ struct NoteEditorView: View {
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                SaveButton {
-                    saveNote()
-                    dismiss()
+                HStack(spacing: 16) {
+                    // Only show delete button in edit mode
+                    if mode == .edit {
+                        Button {
+                            isShowingDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(Color.red)
+                        }
+                        .accessibilityLabel("Delete Note")
+                    }
+                    
+                    SaveButton {
+                        saveNote()
+                        dismiss()
+                    }
                 }
             }
+        }
+        .confirmationDialog("Are you sure you want to delete this note?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let note = existingNote {
+                    noteStore.delete(note: note)
+                    // Use haptic feedback for destructive action
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
         }
     }
     

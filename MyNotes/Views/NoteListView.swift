@@ -105,10 +105,20 @@ struct NoteListView: View {
                         noteStore.togglePin(note: note)
                     }
                 }
+                
+                // Add observer for share action from swipe actions
+                NotificationCenter.default.addObserver(forName: NSNotification.Name("ShareNote"), object: nil, queue: .main) { notification in
+                    if let noteID = notification.object as? UUID,
+                       let note = noteStore.notes.first(where: { $0.id == noteID }) {
+                        // Share the note content
+                        shareNote(note)
+                    }
+                }
             }
             .onDisappear {
-                // Remove observer when view disappears
+                // Remove observers when view disappears
                 NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleNotePin"), object: nil)
+                NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ShareNote"), object: nil)
             }
     }
     
@@ -410,15 +420,42 @@ struct NoteListView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.warning)
         
-        // Delete all selected notes
-        for id in selectedNotes {
-            if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
-                noteStore.delete(note: noteToDelete)
-            }
+        // Get notes to delete
+        let notesToDelete = noteStore.notes.filter { selectedNotes.contains($0.id) }
+        
+        if !notesToDelete.isEmpty {
+            // Use the more efficient batch deletion method
+            noteStore.deleteMultiple(notes: notesToDelete)
+            print("NoteListView: Deleted \(notesToDelete.count) notes")
+        } else {
+            print("NoteListView: No valid notes found to delete")
         }
         
         // Reset selection state
         selectedNotes.removeAll()
         isSelectionMode = false
+    }
+    
+    private func shareNote(_ note: Note) {
+        // Create text to share
+        let shareText = """
+        \(note.title)
+        
+        \(note.content)
+        
+        Shared from MyNotes app
+        """
+        
+        // Create activity view controller
+        let activityViewController = UIActivityViewController(
+            activityItems: [shareText],
+            applicationActivities: nil
+        )
+        
+        // Present the activity view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            rootViewController.present(activityViewController, animated: true)
+        }
     }
 }

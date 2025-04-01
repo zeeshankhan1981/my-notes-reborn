@@ -129,19 +129,40 @@ class ChecklistStore: ObservableObject {
     }
 
     func delete(checklist: ChecklistNote) {
+        print("ChecklistStore: Deleting checklist with ID: \(checklist.id)")
         let context = persistence.container.viewContext
         let request: NSFetchRequest<CDChecklistNote> = CDChecklistNote.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", checklist.id as CVarArg)
         
         do {
             if let checklistToDelete = try context.fetch(request).first {
-                context.delete(checklistToDelete)
-                saveContext()
+                // Use the enhanced safeDelete method from PersistenceController
+                persistence.safeDelete(object: checklistToDelete)
+                print("ChecklistStore: Successfully deleted checklist")
+            } else {
+                print("ChecklistStore: Checklist not found for deletion")
             }
         } catch {
-            print("Error deleting checklist: \(error)")
+            print("ChecklistStore: Error fetching checklist for deletion: \(error.localizedDescription)")
+            
+            // Attempt to recover by using batch delete as fallback
+            let predicate = NSPredicate(format: "id == %@", checklist.id as CVarArg)
+            persistence.batchDelete(entityType: CDChecklistNote.self, predicate: predicate)
         }
         
+        loadChecklists()
+    }
+    
+    func deleteMultiple(checklists: [ChecklistNote]) {
+        print("ChecklistStore: Batch deleting \(checklists.count) checklists")
+        
+        if checklists.isEmpty { return }
+        
+        // Use batch delete for efficiency
+        let checklistIDs = checklists.map { $0.id }
+        let predicate = NSPredicate(format: "id IN %@", checklistIDs as [CVarArg])
+        
+        persistence.batchDelete(entityType: CDChecklistNote.self, predicate: predicate)
         loadChecklists()
     }
 

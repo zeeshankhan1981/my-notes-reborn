@@ -441,14 +441,15 @@ struct ChecklistListView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         
-        // Create a temporary copy to avoid modification during iteration
-        let checklistsToDelete = selectedChecklists
+        // Get checklists to delete
+        let checklistsToDelete = checklistStore.checklists.filter { selectedChecklists.contains($0.id) }
         
-        // Delete the checklists
-        for id in checklistsToDelete {
-            if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
-                checklistStore.delete(checklist: checklistToDelete)
-            }
+        if !checklistsToDelete.isEmpty {
+            // Use the more efficient batch deletion method
+            checklistStore.deleteMultiple(checklists: checklistsToDelete)
+            print("ChecklistListView: Deleted \(checklistsToDelete.count) checklists")
+        } else {
+            print("ChecklistListView: No valid checklists found to delete")
         }
         
         // Clear selection and exit selection mode

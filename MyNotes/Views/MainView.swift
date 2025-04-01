@@ -10,8 +10,16 @@ struct MainView: View {
     @State private var showingNewNote = false
     @State private var showingNewChecklist = false
     
+    // Theme settings
+    @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("useCustomFont") private var useCustomFont = false
+    @AppStorage("fontSize") private var fontSize = 16.0
+    
     // Tab selection
     @State private var selectedTab = 0
+    
+    // Force refresh for theme changes
+    @State private var themeChangeCount = 0
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -25,6 +33,8 @@ struct MainView: View {
                                 showingSettings = true
                             } label: {
                                 Image(systemName: "gear")
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .accessibilityLabel("Settings")
                             }
                         }
                         
@@ -33,6 +43,8 @@ struct MainView: View {
                                 showingNewNote = true
                             } label: {
                                 Image(systemName: "plus")
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .accessibilityLabel("New Note")
                             }
                         }
                     }
@@ -47,11 +59,13 @@ struct MainView: View {
                 ChecklistListView()
                     .navigationTitle("Checklists")
                     .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
+                        ToolbarItem(placement: .navigationBarLeading) {
                             Button {
-                                showingNewChecklist = true
+                                showingSettings = true
                             } label: {
-                                Image(systemName: "plus")
+                                Image(systemName: "gear")
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .accessibilityLabel("Settings")
                             }
                         }
                     }
@@ -65,13 +79,25 @@ struct MainView: View {
             NavigationStack {
                 FolderManagerView()
                     .navigationTitle("Folders")
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "gear")
+                                    .foregroundColor(AppTheme.Colors.primary)
+                                    .accessibilityLabel("Settings")
+                            }
+                        }
+                    }
             }
             .tabItem { 
                 Label("Folders", systemImage: "folder") 
             }
             .tag(2)
         }
-        .tint(Color("AppPrimaryColor"))
+        .tint(AppTheme.Colors.primary)
+        .preferredColorScheme(getPreferredColorScheme())
         .environmentObject(noteStore)
         .environmentObject(checklistStore)
         .environmentObject(folderStore)
@@ -117,6 +143,33 @@ struct MainView: View {
                     .navigationTitle("New Checklist")
                     .navigationBarTitleDisplayMode(.inline)
             }
+        }
+        .id(themeChangeCount) // Force refresh view hierarchy when theme changes
+        .onAppear {
+            setupThemeObserver()
+        }
+    }
+    
+    private func setupThemeObserver() {
+        // Add theme change observer
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("AppThemeChanged"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            // Force refresh the view to apply new theme
+            themeChangeCount += 1
+        }
+    }
+    
+    private func getPreferredColorScheme() -> ColorScheme? {
+        switch appTheme {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil // System default
         }
     }
 }

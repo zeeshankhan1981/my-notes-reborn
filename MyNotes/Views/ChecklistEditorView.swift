@@ -23,6 +23,7 @@ struct ChecklistEditorView: View {
     @State private var animateList = false
     @State private var focusedField: UUID?
     @FocusState private var isAddingNewItem: Bool
+    @State private var isShowingDeleteConfirmation = false
 
     // Original initializer for backward compatibility
     init(mode: ChecklistEditorMode, existingChecklist: ChecklistNote?) {
@@ -71,8 +72,21 @@ struct ChecklistEditorView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                SaveButton {
-                    saveChecklist()
+                HStack(spacing: 16) {
+                    // Only show delete button in edit mode
+                    if mode == .edit {
+                        Button {
+                            isShowingDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .foregroundColor(Color.red)
+                        }
+                        .accessibilityLabel("Delete Checklist")
+                    }
+                    
+                    SaveButton {
+                        saveChecklist()
+                    }
                 }
             }
             
@@ -86,6 +100,20 @@ struct ChecklistEditorView: View {
         .navigationTitle(mode == .new ? "New Checklist" : "Edit Checklist")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: startAnimations)
+        .confirmationDialog("Are you sure you want to delete this checklist?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let checklist = existingChecklist {
+                    checklistStore.delete(checklist: checklist)
+                    // Add haptic feedback for destructive action
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This action cannot be undone.")
+        }
     }
     
     private func startAnimations() {

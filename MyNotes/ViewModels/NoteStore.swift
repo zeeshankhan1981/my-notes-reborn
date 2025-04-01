@@ -115,19 +115,40 @@ class NoteStore: ObservableObject {
     }
     
     func delete(note: Note) {
+        print("NoteStore: Deleting note with ID: \(note.id)")
         let context = persistence.container.viewContext
         let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
         
         do {
             if let noteToDelete = try context.fetch(request).first {
-                context.delete(noteToDelete)
-                saveContext()
+                // Use the enhanced safeDelete method from PersistenceController
+                persistence.safeDelete(object: noteToDelete)
+                print("NoteStore: Successfully deleted note")
+            } else {
+                print("NoteStore: Note not found for deletion")
             }
         } catch {
-            print("Error deleting note: \(error)")
+            print("NoteStore: Error fetching note for deletion: \(error.localizedDescription)")
+            
+            // Attempt to recover by using batch delete as fallback
+            let predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
+            persistence.batchDelete(entityType: CDNote.self, predicate: predicate)
         }
         
+        loadNotes()
+    }
+    
+    func deleteMultiple(notes: [Note]) {
+        print("NoteStore: Batch deleting \(notes.count) notes")
+        
+        if notes.isEmpty { return }
+        
+        // Use batch delete for efficiency
+        let noteIDs = notes.map { $0.id }
+        let predicate = NSPredicate(format: "id IN %@", noteIDs as [CVarArg])
+        
+        persistence.batchDelete(entityType: CDNote.self, predicate: predicate)
         loadNotes()
     }
     

@@ -75,12 +75,10 @@ struct NoteCardView: View {
         .background(isSelected ? AppTheme.Colors.highlightBackground : AppTheme.Colors.cardSurface)
         .cornerRadius(AppTheme.Dimensions.radiusM)
         .shadow(
-            color: colorScheme == .dark 
-                ? AppTheme.Colors.cardShadow.opacity(0.25) 
-                : AppTheme.Colors.cardShadow.opacity(0.08),
-            radius: 4,
-            x: 0,
-            y: 2
+            color: AppTheme.Colors.cardShadow.opacity(colorScheme == .dark ? 0.3 : 0.1),
+            radius: AppTheme.Dimensions.shadowRadius,
+            x: AppTheme.Dimensions.shadowOffsetX,
+            y: AppTheme.Dimensions.shadowOffsetY
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
@@ -101,6 +99,44 @@ struct NoteCardView: View {
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()
             onLongPress()
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                withAnimation {
+                    onDelete()
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            
+            Button {
+                let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+                impactGenerator.impactOccurred()
+                
+                // Post notification to trigger pin toggle in parent view
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ToggleNotePin"),
+                    object: note.id
+                )
+            } label: {
+                Label(note.isPinned ? "Unpin" : "Pin", systemImage: note.isPinned ? "pin.slash" : "pin")
+            }
+            .tint(AppTheme.Colors.primary)
+        }
+        .swipeActions(edge: .leading) {
+            Button {
+                let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
+                impactGenerator.impactOccurred()
+                
+                // Post notification for sharing
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("ShareNote"),
+                    object: note.id
+                )
+            } label: {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            .tint(AppTheme.Colors.accent)
         }
         .animation(AppTheme.Animations.standardCurve, value: isSelected)
         .listItemTransition()

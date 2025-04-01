@@ -6,14 +6,17 @@ struct AppTheme {
         // Base colors - minimal and focused
         static let primary = Color("AppPrimaryColor") 
         static let secondary = Color("AppSecondaryColor")
-        static let accent = Color.blue // Simple blue accent like iA Writer
-        static let background = Color.white // Clean white background
-        static let secondaryBackground = Color(UIColor.systemGray6) // Very subtle gray
+        static let accent = Color.accentColor // System accent color that adapts to dark mode
         
-        // Text colors - high contrast for better readability
-        static let textPrimary = Color.black // Pure black for text
-        static let textSecondary = Color(UIColor.darkGray)
-        static let textTertiary = Color(UIColor.gray)
+        // Dynamic backgrounds that adapt to dark mode
+        static let background = Color(UIColor.systemBackground)
+        static let secondaryBackground = Color(UIColor.secondarySystemBackground)
+        static let cardSurface = Color(UIColor.secondarySystemBackground)
+        
+        // Text colors - dynamic for dark mode support
+        static let textPrimary = Color(UIColor.label)
+        static let textSecondary = Color(UIColor.secondaryLabel)
+        static let textTertiary = Color(UIColor.tertiaryLabel)
         
         // Status colors - minimal but clear
         static let success = Color.green
@@ -22,20 +25,19 @@ struct AppTheme {
         static let danger = Color.red // Alias for error to maintain compatibility
         static let info = Color.blue
         
-        // Simplified surface colors
-        static let cardSurface = Color.white
-        static let cardShadow = Color.black.opacity(0.05)
-        static let divider = Color(UIColor.systemGray5)
-        static let highlightBackground = Color.blue.opacity(0.1)
-        static let selectedRowBackground = Color.blue.opacity(0.08) // For selected rows/items
+        // Dynamic surface colors
+        static let cardShadow = Color(UIColor.label).opacity(0.1)
+        static let divider = Color(UIColor.separator)
+        static let highlightBackground = Color.accentColor.opacity(0.1)
+        static let selectedRowBackground = Color.accentColor.opacity(0.08)
         
-        // Focus mode
-        static let focusBackground = Color(white: 0.98)
+        // Focus mode - now dynamically adapting to dark mode
+        static let focusBackground = Color(UIColor.tertiarySystemBackground)
         
-        // New interface states for Todoist-inspired design
-        static let pressedState = Color.gray.opacity(0.3)
-        static let disabledState = Color.gray.opacity(0.4)
-        static let textOnPrimary = Color.white
+        // Interface states
+        static let pressedState = Color(UIColor.systemGray3)
+        static let disabledState = Color(UIColor.systemGray4)
+        static let textOnPrimary = Color(UIColor.systemBackground)
         
         // Tag colors - for visualization (Todoist-inspired)
         static let tagColors: [Color] = [
@@ -82,6 +84,11 @@ struct AppTheme {
         static let elevationS: CGFloat = 2
         static let elevationM: CGFloat = 4
         static let elevationL: CGFloat = 8
+        
+        // Shadow properties
+        static let shadowRadius: CGFloat = 4
+        static let shadowOffsetY: CGFloat = 2
+        static let shadowOffsetX: CGFloat = 0
         
         // Typography measurements
         static let lineHeight: CGFloat = 1.6 // Increased line height like iA Writer
