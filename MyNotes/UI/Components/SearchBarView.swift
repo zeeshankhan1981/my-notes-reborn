@@ -45,17 +45,44 @@ struct SearchBarView: View {
                             .font(.system(size: 16))
                     }
                     .transition(.scale.combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.2), value: searchText)
+                }
+                
+                Button(action: {
+                    withAnimation(AppTheme.Animations.standardCurve) {
+                        // Clear and dismiss search
+                        searchText = ""
+                        isFocused = false
+                        isSearching = false
+                    }
+                    // Add haptic feedback for cancel action
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                }) {
+                    Text("Cancel")
+                        .foregroundColor(AppTheme.Colors.primary)
+                        .font(AppTheme.Typography.subheadline())
+                }
+                .padding(.leading, 4)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
+                    .fill(AppTheme.Colors.cardSurface.opacity(0.8))
+                    .shadow(
+                        color: AppTheme.Colors.cardShadow.opacity(0.08), 
+                        radius: 2, 
+                        x: 0, 
+                        y: 1
+                    )
+            )
+            .onAppear {
+                // Auto-focus the search field when it appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isFocused = true
                 }
             }
-            .padding(12)
-            .background(colorScheme == .dark ? 
-                AppTheme.Colors.cardSurface : 
-                AppTheme.Colors.secondaryBackground)
-            .cornerRadius(AppTheme.Dimensions.radiusM)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-                    .stroke(isFocused ? AppTheme.Colors.primary.opacity(0.2) : Color.clear, lineWidth: 1.5)
-            )
             
             if !searchText.isEmpty {
                 HStack {

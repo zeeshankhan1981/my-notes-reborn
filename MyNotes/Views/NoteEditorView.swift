@@ -11,9 +11,14 @@ struct NoteEditorView: View {
     @EnvironmentObject var folderStore: FolderStore
     @EnvironmentObject var tagStore: TagStore
     @Environment(\.dismiss) var dismiss
+    @Environment(\.presentationMode) var presentationMode
 
     let mode: NoteEditorMode
     let existingNote: Note?
+    
+    // Flag to indicate if toolbar items should be shown
+    // This helps avoid duplicate buttons when presented from MainView
+    var showsToolbarItems: Bool = true
     
     @State private var title = ""
     @State private var content = ""
@@ -26,9 +31,10 @@ struct NoteEditorView: View {
     @State private var isFocusMode = false
     
     // Original initializer for backward compatibility
-    init(mode: NoteEditorMode, existingNote: Note?) {
+    init(mode: NoteEditorMode, existingNote: Note?, showsToolbarItems: Bool = true) {
         self.mode = mode
         self.existingNote = existingNote
+        self.showsToolbarItems = showsToolbarItems
         
         if let note = existingNote, mode == .edit {
             _title = State(initialValue: note.title)
@@ -39,13 +45,14 @@ struct NoteEditorView: View {
             
             // Initialize attributedContent from data if available
             if let attributedContentData = note.attributedContent,
-               let decodedAttributedString = try? NSAttributedString(
-                   data: attributedContentData,
-                   options: [.documentType: NSAttributedString.DocumentType.rtfd],
-                   documentAttributes: nil) {
-                _attributedContent = State(initialValue: decodedAttributedString)
+               let attributedString = try? NSAttributedString(
+                data: attributedContentData,
+                options: [.documentType: NSAttributedString.DocumentType.rtfd],
+                documentAttributes: nil
+               ) {
+                _attributedContent = State(initialValue: attributedString)
             } else {
-                // Fallback to regular content with default attributes
+                // Fallback to plain text content if no attributed content
                 _attributedContent = State(initialValue: NSAttributedString(
                     string: note.content,
                     attributes: [.font: UIFont.monospacedSystemFont(ofSize: 16, weight: .regular)]
@@ -99,22 +106,24 @@ struct NoteEditorView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                CancelButton {
-                    dismiss()
+            if showsToolbarItems {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    CancelButton {
+                        dismiss()
+                    }
                 }
-            }
-            
-            ToolbarItem(placement: .principal) {
-                Text(mode == .new ? "New Note" : "Edit Note")
-                    .font(AppTheme.Typography.headline())
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                SaveButton {
-                    saveNote()
-                    dismiss()
+                
+                ToolbarItem(placement: .principal) {
+                    Text(mode == .new ? "New Note" : "Edit Note")
+                        .font(AppTheme.Typography.headline())
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    SaveButton {
+                        saveNote()
+                        dismiss()
+                    }
                 }
             }
         }

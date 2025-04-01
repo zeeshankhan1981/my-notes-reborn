@@ -87,13 +87,7 @@ struct ChecklistListView: View {
             }
             .confirmationDialog("Are you sure you want to delete these checklists?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
-                    for id in selectedChecklists {
-                        if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
-                            checklistStore.delete(checklist: checklistToDelete)
-                        }
-                    }
-                    selectedChecklists.removeAll()
-                    isSelectionMode = false
+                    deleteSelectedChecklists()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -216,17 +210,18 @@ struct ChecklistListView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red.opacity(0.8))
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    )
                     .padding(.horizontal)
-                    .background(AppTheme.Colors.error)
-                    .cornerRadius(AppTheme.Dimensions.radiusM)
-                    .padding(.horizontal)
+                    .padding(.bottom, 8)
                 }
                 .buttonStyle(PressableButtonStyle())
             }
         }
-        .background(colorScheme == .dark ? 
-            AppTheme.Colors.cardSurface.opacity(0.9) : 
-            AppTheme.Colors.secondaryBackground.opacity(0.9))
+        .background(AppTheme.Colors.cardSurface.opacity(0.9))
         .shadow(
             color: AppTheme.Colors.cardShadow.opacity(0.1),
             radius: 3,
@@ -526,25 +521,19 @@ struct ChecklistListView: View {
     }
     
     private func deleteSelectedChecklists() {
-        // Add haptic feedback for destructive action
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        
-        // Create a temporary copy to avoid modification during iteration
-        let checklistsToDelete = selectedChecklists
-        
-        // Delete the checklists
-        for id in checklistsToDelete {
+        for id in selectedChecklists {
             if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
                 checklistStore.delete(checklist: checklistToDelete)
             }
         }
         
-        // Clear selection and exit selection mode
+        // Provide haptic feedback for delete action
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // Reset selection state
         selectedChecklists.removeAll()
-        withAnimation(AppTheme.Animations.standardCurve) {
-            isSelectionMode = false
-        }
+        isSelectionMode = false
     }
     
     private var trailingToolbarContent: some View {

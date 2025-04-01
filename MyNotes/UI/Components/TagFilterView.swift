@@ -22,9 +22,8 @@ struct TagFilterView: View {
             }
         }
         .padding(AppTheme.Dimensions.spacingM)
-        .background(colorScheme == .dark ? 
-                    AppTheme.Colors.cardSurface.opacity(0.9) : 
-                    AppTheme.Colors.secondaryBackground.opacity(0.7))
+        .frame(maxWidth: .infinity, minHeight: 60)
+        .background(AppTheme.Colors.secondaryBackground.opacity(0.7))
         .cornerRadius(AppTheme.Dimensions.radiusM)
         .shadow(color: AppTheme.Colors.cardShadow.opacity(0.08), radius: 3, x: 0, y: 2)
         .animation(AppTheme.Animations.standardCurve, value: isExpanded)
@@ -33,6 +32,10 @@ struct TagFilterView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 withAnimation {
                     animateItems = true
+                    // Auto-expand if there are no selected tags to show tag options
+                    if selectedTagIds.isEmpty && !tagStore.tags.isEmpty {
+                        isExpanded = true
+                    }
                 }
             }
         }
@@ -93,27 +96,37 @@ struct TagFilterView: View {
     }
     
     private var noTagsView: some View {
-        HStack {
-            Spacer()
+        VStack(spacing: AppTheme.Dimensions.spacingXS) {
+            Image(systemName: "tag.slash")
+                .font(.system(size: 24))
+                .foregroundColor(AppTheme.Colors.textTertiary)
+                .padding(.bottom, 4)
             
-            VStack(spacing: AppTheme.Dimensions.spacingXS) {
-                Image(systemName: "tag.slash")
-                    .font(.system(size: 24))
-                    .foregroundColor(AppTheme.Colors.textTertiary)
-                    .padding(.bottom, 4)
-                
-                Text("No tags available")
+            Text("No tags available")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textTertiary)
+            
+            Button {
+                // Toggle the view closed since there are no tags
+                withAnimation {
+                    isExpanded = false
+                }
+            } label: {
+                Text("Close")
                     .font(AppTheme.Typography.caption())
-                    .foregroundColor(AppTheme.Colors.textTertiary)
-                
-                Text("Create tags in note settings")
-                    .font(AppTheme.Typography.captionSmall())
-                    .foregroundColor(AppTheme.Colors.textTertiary)
+                    .foregroundColor(AppTheme.Colors.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(AppTheme.Colors.primary.opacity(0.1))
+                    )
             }
-            .padding(.vertical, AppTheme.Dimensions.spacingM)
-            
-            Spacer()
+            .buttonStyle(PressableButtonStyle())
+            .padding(.top, 8)
         }
+        .padding(.vertical, AppTheme.Dimensions.spacingS)
+        .frame(maxWidth: .infinity)
     }
     
     private var tagOptionsView: some View {

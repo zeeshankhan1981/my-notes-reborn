@@ -239,13 +239,23 @@ struct NoteListView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.red)
-                    .cornerRadius(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.red.opacity(0.8))
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    )
                     .padding(.horizontal)
+                    .padding(.bottom, 8)
                 }
             }
         }
-        .background(AppTheme.Colors.secondaryBackground)
+        .background(AppTheme.Colors.cardSurface.opacity(0.9))
+        .shadow(
+            color: AppTheme.Colors.cardShadow.opacity(0.1),
+            radius: 4,
+            x: 0,
+            y: 2
+        )
         .transition(.move(edge: .top).combined(with: .opacity))
     }
     
@@ -402,52 +412,32 @@ struct NoteListView: View {
     
     // MARK: - Helper Functions
     
-    private func handleLongPress(for note: Note) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
+    private func toggleSelection(for note: Note) {
+        let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
         
         withAnimation {
-            if isSelectionMode {
-                // Already in selection mode, toggle this note
-                toggleSelection(for: note)
+            if selectedNotes.contains(note.id) {
+                selectedNotes.remove(note.id)
             } else {
-                // Enter selection mode and select this note
-                isSelectionMode = true
                 selectedNotes.insert(note.id)
             }
         }
     }
     
-    private func toggleSelection(for note: Note) {
-        if selectedNotes.contains(note.id) {
-            selectedNotes.remove(note.id)
-            
-            // If no items are selected, exit selection mode
-            if selectedNotes.isEmpty {
-                withAnimation {
-                    isSelectionMode = false
-                }
-            }
-        } else {
-            selectedNotes.insert(note.id)
-        }
-    }
-    
     private func deleteSelectedNotes() {
-        // Create a temporary copy to avoid modification during iteration
-        let notesToDelete = selectedNotes
-        
-        // Delete the notes
-        for id in notesToDelete {
+        for id in selectedNotes {
             if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
                 noteStore.delete(note: noteToDelete)
             }
         }
         
-        // Clear selection and exit selection mode
+        // Provide haptic feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // Reset selection state
         selectedNotes.removeAll()
-        withAnimation {
-            isSelectionMode = false
-        }
+        isSelectionMode = false
     }
 }

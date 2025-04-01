@@ -2,129 +2,134 @@
 
 ## Overview
 
-This design audit examines the current state of the MyNotes app, comparing it against Todoist's design principles and identifying opportunities for improvement. The goal is to create a cleaner, more intuitive interface while maintaining the app's minimalist philosophy.
+This design audit examines the current state of the MyNotes app, focusing on UI consistency and modern design principles. The goal is to maintain a clean, minimalist interface while ensuring a polished user experience.
 
-## Design Principles (Inspired by Todoist)
+## Design Principles
 
-1. **Clean & Focused**: Every screen should have a clear purpose with minimal distractions
-2. **Consistent Visual Language**: Elements should behave predictably across the app
-3. **Thoughtful Animations**: Animations should guide users and provide feedback
-4. **Accessible**: Design should work for all users regardless of abilities
-5. **Detail-oriented**: Small details create a premium feel
+1. **Consistent Visual Language**
+   - Unified toolbar layout across all views
+   - Consistent spacing and padding
+   - Standardized button and icon styles
+   - Smooth animations and transitions
+
+2. **Intuitive Interactions**
+   - Clear visual feedback for all actions
+   - Consistent swipe behavior across list views
+   - Smooth animations for state changes
+   - Haptic feedback for important interactions
+
+3. **Clean & Focused**
+   - Minimal distractions in writing interfaces
+   - Clear visual hierarchy
+   - Proper use of whitespace
+   - Consistent typography system
 
 ## Current App Assessment
 
 ### Color System
 
-| Element | Current Implementation | Todoist Inspiration | Recommendation |
-|---------|------------------------|---------------------|----------------|
-| Primary Color | Blue | Red (brand) | Create a consistent brand color (consider forest green) |
-| Background | White | Light gray/white | Add subtle texture or gradient for depth |
-| Text | Black, Dark Gray, Gray | High contrast with background | Maintain high contrast but soften primary text |
-| Status Colors | Standard (red, green, blue) | Muted with personality | Create custom status colors with better harmony |
-| Dark Mode | Limited | Full support with custom palette | Implement full dark mode with proper contrast |
+| Element | Current Implementation | Notes |
+|---------|------------------------|--------|
+| Primary Color | Custom theme colors | Used consistently across app |
+| Background | Consistent theme colors | Proper contrast maintained |
+| Text | High contrast with background | Readable in all modes |
+| Status Colors | Custom theme colors | Consistent use for actions |
+| Dark Mode | Full support | Proper contrast and visibility |
 
 ### Typography
 
-| Element | Current Implementation | Todoist Inspiration | Recommendation |
-|---------|------------------------|---------------------|----------------|
-| Headings | System font, varying weights | Clear hierarchy with custom font | Implement stronger visual hierarchy |
-| Body Text | System font, monospaced for editor | Clean, highly readable | Keep monospaced for editor, improve readability elsewhere |
-| Line Height | 1.6 | Varies by context | Maintain but adjust for different content types |
-| Font Sizes | Limited range | Comprehensive scale | Create more comprehensive typographic scale |
+| Element | Current Implementation | Notes |
+|---------|------------------------|--------|
+| Headings | Custom typography system | Clear hierarchy maintained |
+| Body Text | Monospaced for editor | Improved readability |
+| Line Height | Standardized | Consistent spacing |
+| Font Sizes | Comprehensive scale | Proper hierarchy |
 
 ### Components
 
-| Component | Current State | Todoist Example | Improvement Opportunity |
-|-----------|--------------|-----------------|--------------------------|
-| Cards | Basic white cards | Subtle depth, clear hierarchy | Add subtle elevation, improve content spacing |
-| Lists | Basic implementation | Rich interaction, clear hierarchy | Enhance with animations, better spacing |
-| Buttons | Minimal styling | Clear hierarchy, good feedback | Add hover/active states, better feedback |
-| Input Fields | Basic | Clear focus states, helpful validation | Improve focus states and validation feedback |
-| Empty States | Basic | Informative, actionable, delightful | Create rich, helpful empty states |
-| Navigation | Tab-based | Smooth transitions, clear structure | Enhance transitions between views |
-| Toolbar (Rich Text) | Recently improved with SF Symbols | Context-sensitive, unobtrusive | Further refine grouping and accessibility |
+| Component | Current State | Notes |
+|-----------|--------------|--------|
+| Cards | Consistent design | Proper elevation and spacing |
+| Lists | Smooth interactions | Consistent swipe behavior |
+| Buttons | Standardized styles | Clear visual feedback |
+| Input Fields | Consistent focus states | Proper validation feedback |
+| Empty States | Informative | Clear call-to-action |
+| Navigation | Consistent toolbar | Smooth transitions |
+| Toolbar | Unified design | Consistent across views |
 
 ### Interactions & Animations
 
-| Feature | Current Implementation | Todoist Approach | Recommended Changes |
-|---------|------------------------|------------------|---------------------|
-| List Transitions | Basic | Smooth, physical animations | Add appropriate enter/exit animations |
-| Button Feedback | Minimal | Clear visual + haptic feedback | Add micro-animations and haptic feedback |
-| Gestures | Basic swipe actions | Rich gesture system with feedback | Enhance gesture recognition and feedback |
-| State Changes | Abrupt | Smooth transitions | Add transitions between states |
-| Loading States | Minimal | Skeleton UI, smooth loaders | Implement skeleton UI for loading states |
+| Feature | Current Implementation | Notes |
+|---------|------------------------|--------|
+| List Transitions | Smooth animations | Proper timing and easing |
+| Button Feedback | Visual + haptic feedback | Clear and consistent |
+| Gestures | Rich gesture system | Proper recognition and feedback |
+| State Changes | Smooth transitions | Proper timing and feedback |
+| Loading States | Skeleton UI | Proper loading states |
 
 ## Screen-by-Screen Analysis
 
 ### Notes List
-
-- **Current**: Basic list with minimal visual hierarchy
-- **Todoist Inspiration**: Rich task lists with clear hierarchy, context menus, smooth animations
-- **Opportunities**:
-  - Improve card design with subtle shadows and better spacing
-  - Add animation when notes appear/disappear
-  - Enhance swipe actions with better visual feedback
-  - Improve empty state design
+- **Current**: Consistent card design with proper spacing
+- **Improvements**:
+  - Enhanced selection mode UI
+  - Improved delete functionality
+  - Better tag filter integration
+  - Consistent toolbar across views
 
 ### Note Editor
-
-- **Current**: Clean editor with improved formatting toolbar
-- **Todoist Inspiration**: Focus mode, context-sensitive tools, smooth transitions
-- **Opportunities**:
-  - Add focus mode with reduced UI
-  - Improve formatting toolbar organization
-  - Add subtle animations for state changes
-  - Enhance visual feedback when formatting is applied
+- **Current**: Clean editor with standardized formatting toolbar
+- **Improvements**:
+  - Enhanced visual feedback
+  - Better state transitions
+  - Consistent button styles
+  - Improved typography system
 
 ### Checklists
-
-- **Current**: Basic implementation with spacing issues
-- **Todoist Inspiration**: Smooth interactions, clear progress indicators, satisfying completion animations
-- **Opportunities**:
-  - Add completion animations
-  - Improve visual hierarchy
-  - Fix spacing issues
-  - Add progress visualization
+- **Current**: Consistent implementation with notes
+- **Improvements**:
+  - Enhanced selection mode
+  - Better delete functionality
+  - Improved tag integration
+  - Consistent toolbar
 
 ### Tag Management
-
-- **Current**: Functional but basic
-- **Todoist Inspiration**: Color customization, smooth interactions
-- **Opportunities**:
-  - Enhance color selection interface
-  - Improve organization of tags
-  - Add animations for tag creation/deletion
-  - Improve visual feedback
+- **Current**: Functional with proper UI components
+- **Improvements**:
+  - Enhanced color selection
+  - Better filter integration
+  - Consistent UI components
+  - Improved visual feedback
 
 ## Action Items
 
 Based on this audit, our next steps should be:
 
-1. **Refine Color System**
-   - Create a comprehensive color palette
-   - Implement dark mode support
-   - Define semantic color usage
+1. **Refine UI Components**
+   - Enhance selection mode UI
+   - Improve delete functionality
+   - Better tag filter integration
+   - Consistent toolbar across views
 
-2. **Enhance Typography**
-   - Create a more comprehensive typography scale
-   - Improve visual hierarchy through typography
-   - Ensure consistent implementation across app
+2. **Enhance Interactions**
+   - Improve visual feedback
+   - Better state transitions
+   - Consistent button styles
+   - Improved typography system
 
-3. **Revamp Components**
-   - Redesign cards with subtle elevation
-   - Improve list interactions
-   - Create consistent button styles
-   - Design rich empty states
-
-4. **Add Thoughtful Animations**
-   - Implement list item animations
-   - Add micro-interactions for buttons
-   - Create smooth transitions between states
-   - Add gesture feedback
-
-5. **Improve Accessibility**
+3. **Improve Accessibility**
    - Ensure proper contrast
    - Support Dynamic Type
    - Implement proper VoiceOver support
    - Add reduced motion options
+
+4. **Polish Animations**
+   - Smooth list transitions
+   - Clear button feedback
+   - Proper gesture recognition
+   - Smooth state changes
+
+5. **Consistency Check**
+   - Review app for consistency
+   - Ensure consistent design language
+   - Fix any inconsistencies found
