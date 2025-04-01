@@ -83,4 +83,9 @@ class FolderStore: ObservableObject {
     private func saveContext() {
         persistence.save()
     }
+    
+    // Method to get a folder by ID
+    func getFolder(id: UUID) -> Folder? {
+        return folders.first { $0.id == id }
+    }
 }

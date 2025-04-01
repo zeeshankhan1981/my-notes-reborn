@@ -19,12 +19,6 @@ struct PersistenceController {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
         
-        // Configure store for better performance
-        if let description = container.persistentStoreDescriptions.first {
-            description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
-            description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
-        }
-        
         container.loadPersistentStores { description, error in
             if let error = error {
                 fatalError("Error loading Core Data: \(error.localizedDescription)")

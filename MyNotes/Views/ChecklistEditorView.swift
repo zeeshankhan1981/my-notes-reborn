@@ -52,6 +52,14 @@ struct ChecklistEditorView: View {
         }
     }
     
+    // Sheet presentation initializer
+    init(isPresented: Binding<Bool>) {
+        self.mode = .new
+        self.existingChecklist = nil
+        // When dismissed from this initializer, we need to set isPresented to false
+        // This is handled in the saveChecklist() method
+    }
+    
     var body: some View {
         ZStack {
             // Background color

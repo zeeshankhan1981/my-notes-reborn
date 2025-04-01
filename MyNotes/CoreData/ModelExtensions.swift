@@ -28,11 +28,76 @@ extension CDNote {
         request.predicate = NSPredicate(format: "id == %@", note.id.uuidString)
         request.fetchLimit = 1
         
+<<<<<<< HEAD
         if let existingNote = try? context.fetch(request).first {
             cdNote = existingNote
         } else {
             cdNote = CDNote(context: context)
             cdNote.id = note.id
+=======
+        do {
+            if let existingNote = try context.fetch(request).first {
+                cdNote = existingNote
+                print("Note: Found existing note with ID \(note.id)")
+            } else {
+                cdNote = CDNote(context: context)
+                cdNote.id = note.id
+                print("Note: Created new Core Data note with ID \(note.id)")
+            }
+            
+            // Update properties
+            cdNote.title = note.title
+            cdNote.content = note.content
+            cdNote.isPinned = note.isPinned
+            cdNote.date = note.date
+            cdNote.imageData = note.imageData
+            cdNote.attributedContent = note.attributedContent
+            
+            // Handle folder relationship if needed
+            if let folderID = note.folderID {
+                let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
+                folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+                if let folder = try context.fetch(folderRequest).first {
+                    cdNote.folder = folder
+                }
+            } else {
+                cdNote.folder = nil
+            }
+            
+            // Handle tag relationships
+            // First, remove any existing tag relationships
+            if let existingTags = cdNote.tags {
+                // Create an NSSet from the existing tags
+                cdNote.removeFromTags(NSSet(array: existingTags.allObjects))
+            }
+            
+            // Then add the current tags
+            if !note.tagIDs.isEmpty {
+                let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+                // Use IN predicate with UUID objects directly
+                tagRequest.predicate = NSPredicate(format: "id IN %@", note.tagIDs as [Any])
+                
+                let tags = try? context.fetch(tagRequest)
+                for tag in tags ?? [] {
+                    cdNote.addToTags(tag)
+                }
+            }
+            
+            return cdNote
+            
+        } catch {
+            print("Error in fromDomainModel for Note: \(error)")
+            // Create a new instance as fallback
+            let newNote = CDNote(context: context)
+            newNote.id = note.id
+            newNote.title = note.title
+            newNote.content = note.content
+            newNote.isPinned = note.isPinned
+            newNote.date = note.date
+            newNote.imageData = note.imageData
+            newNote.attributedContent = note.attributedContent
+            return newNote
+>>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
         }
         
         // Update properties
@@ -136,6 +201,7 @@ extension CDChecklistNote {
         request.predicate = NSPredicate(format: "id == %@", checklist.id.uuidString)
         request.fetchLimit = 1
         
+<<<<<<< HEAD
         if let existingChecklist = try? context.fetch(request).first {
             cdChecklist = existingChecklist
             
@@ -144,6 +210,67 @@ extension CDChecklistNote {
                 for case let item as CDChecklistItem in existingItems {
                     cdChecklist.removeFromItems(item)
                     context.delete(item)
+=======
+        do {
+            if let existingChecklist = try context.fetch(request).first {
+                cdChecklist = existingChecklist
+                print("Checklist: Found existing checklist with ID \(checklist.id)")
+                
+                // Remove existing items to avoid duplicates
+                if let existingItems = cdChecklist.items {
+                    // First remove the relationship
+                    cdChecklist.removeFromItems(NSSet(array: existingItems.allObjects))
+                    
+                    // Then delete each item from the context
+                    for case let item as CDChecklistItem in existingItems.allObjects {
+                        context.delete(item)
+                    }
+                }
+            } else {
+                cdChecklist = CDChecklistNote(context: context)
+                cdChecklist.id = checklist.id
+                print("Checklist: Created new Core Data checklist with ID \(checklist.id)")
+            }
+            
+            // Update properties
+            cdChecklist.title = checklist.title
+            cdChecklist.date = checklist.date
+            cdChecklist.isPinned = checklist.isPinned
+            
+            // Handle folder relationship if needed
+            if let folderID = checklist.folderID {
+                let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
+                folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+                if let folder = try context.fetch(folderRequest).first {
+                    cdChecklist.folder = folder
+                }
+            } else {
+                cdChecklist.folder = nil
+            }
+            
+            // Add items
+            for item in checklist.items {
+                let cdItem = CDChecklistItem.fromDomainModel(item, in: context)
+                cdChecklist.addToItems(cdItem)
+            }
+            
+            // Handle tag relationships
+            // First, remove any existing tag relationships
+            if let existingTags = cdChecklist.tags {
+                // Create an NSSet from the existing tags
+                cdChecklist.removeFromTags(NSSet(array: existingTags.allObjects))
+            }
+            
+            // Then add the current tags
+            if !checklist.tagIDs.isEmpty {
+                let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
+                // Use IN predicate with UUID objects directly
+                tagRequest.predicate = NSPredicate(format: "id IN %@", checklist.tagIDs as [Any])
+                
+                let tags = try? context.fetch(tagRequest)
+                for tag in tags ?? [] {
+                    cdChecklist.addToTags(tag)
+>>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
                 }
             }
         } else {

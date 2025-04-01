@@ -49,77 +49,95 @@ struct ChecklistListView: View {
     }
 
     var body: some View {
-        NavigationView {
-            mainContentView
-                .navigationTitle("Checklists")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        leadingToolbarContent
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        trailingToolbarContent
-                    }
-                }
-                .sheet(isPresented: $showingAdd) {
-                    newChecklistSheet
-                }
-                .sheet(item: $selectedChecklist) { checklist in
-                    editChecklistSheet(checklist)
-                }
-                .alert("Delete Checklists", isPresented: $isShowingDeleteConfirmation) {
-                    Button("Cancel", role: .cancel) { }
-                    Button("Delete", role: .destructive) {
-                        deleteSelectedChecklists()
-                    }
-                } message: {
-                    Text("Are you sure you want to delete \(selectedChecklists.count) checklist\(selectedChecklists.count == 1 ? "" : "s")? This cannot be undone.")
-                }
-                .onChange(of: isEditing) { _, newValue in
-                    if !newValue {
-                        selectedChecklist = nil
-                    }
-                }
-                .onAppear {
-                    // Trigger animation when view appears
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            animateListAppearance = true
+        mainContentView
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    // Only keep filter button if needed
+                    if !filteredChecklists.isEmpty && !isSelectionMode {
+                        Button {
+                            showingTagFilter.toggle()
+                        } label: {
+                            Image(systemName: "tag")
+                                .foregroundColor(selectedTagIDs.isEmpty ? Color.primary : AppTheme.Colors.primary)
                         }
-                    }
-                    
-                    // Add observer for pin toggle from swipe actions
-                    NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleChecklistPin"), object: nil, queue: .main) { notification in
-                        if let checklistID = notification.object as? UUID,
-                           let checklist = checklistStore.checklists.first(where: { $0.id == checklistID }) {
-                            checklistStore.togglePin(checklist: checklist)
-                        }
-                    }
-                    
-                    // Add observer for complete all items from swipe actions
-                    NotificationCenter.default.addObserver(forName: NSNotification.Name("CompleteAllChecklistItems"), object: nil, queue: .main) { notification in
-                        if let checklistID = notification.object as? UUID,
-                           let index = checklistStore.checklists.firstIndex(where: { $0.id == checklistID }) {
-                            var updatedChecklist = checklistStore.checklists[index]
-                            let allDone = updatedChecklist.items.allSatisfy { $0.isDone }
-                            
-                            for i in 0..<updatedChecklist.items.count {
-                                updatedChecklist.items[i].isDone = !allDone
-                            }
-                            
-                            checklistStore.updateChecklist(checklist: updatedChecklist)
-                            
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.success)
+                        .accessibilityLabel("Filter by tags")
+                        .popover(isPresented: $showingTagFilter) {
+                            TagFilterView(selectedTagIds: $selectedTagIDs)
                         }
                     }
                 }
-                .onDisappear {
-                    // Remove observers when view disappears
-                    NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleChecklistPin"), object: nil)
-                    NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CompleteAllChecklistItems"), object: nil)
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    trailingToolbarContent
                 }
-        }
+            }
+            .sheet(isPresented: $showingAdd) {
+                NavigationView {
+                    ChecklistEditorView(mode: .new, existingChecklist: nil)
+                        .navigationTitle("New Checklist")
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+            .sheet(item: $selectedChecklist) { checklist in
+                NavigationView {
+                    ChecklistEditorView(mode: .edit, existingChecklist: checklist)
+                        .navigationTitle("Edit Checklist")
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+            .confirmationDialog("Are you sure you want to delete these checklists?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    for id in selectedChecklists {
+                        if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
+                            checklistStore.delete(checklist: checklistToDelete)
+                        }
+                    }
+                    selectedChecklists.removeAll()
+                    isSelectionMode = false
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone.")
+            }
+            .onAppear {
+                // Animate list appearance
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation {
+                        animateListAppearance = true
+                    }
+                }
+                
+                // Add observer for pin toggle from swipe actions
+                NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleChecklistPin"), object: nil, queue: .main) { notification in
+                    if let checklistID = notification.object as? UUID,
+                       let checklist = checklistStore.checklists.first(where: { $0.id == checklistID }) {
+                        checklistStore.togglePin(checklist: checklist)
+                    }
+                }
+                
+                // Add observer for complete all items from swipe actions
+                NotificationCenter.default.addObserver(forName: NSNotification.Name("CompleteAllChecklistItems"), object: nil, queue: .main) { notification in
+                    if let checklistID = notification.object as? UUID,
+                       let index = checklistStore.checklists.firstIndex(where: { $0.id == checklistID }) {
+                        var updatedChecklist = checklistStore.checklists[index]
+                        let allDone = updatedChecklist.items.allSatisfy { $0.isDone }
+                        
+                        for i in 0..<updatedChecklist.items.count {
+                            updatedChecklist.items[i].isDone = !allDone
+                        }
+                        
+                        checklistStore.updateChecklist(checklist: updatedChecklist)
+                        
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }
+                }
+            }
+            .onDisappear {
+                // Remove observers when view disappears
+                NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleChecklistPin"), object: nil)
+                NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CompleteAllChecklistItems"), object: nil)
+            }
     }
     
     // MARK: - View Components
@@ -155,20 +173,7 @@ struct ChecklistListView: View {
             }
             .background(AppTheme.Colors.background)
         }
-        .confirmationDialog("Are you sure you want to delete these checklists?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                for id in selectedChecklists {
-                    if let checklistToDelete = checklistStore.checklists.first(where: { $0.id == id }) {
-                        checklistStore.delete(checklist: checklistToDelete)
-                    }
-                }
-                selectedChecklists.removeAll()
-                isSelectionMode = false
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action cannot be undone.")
-        }
+        .background(AppTheme.Colors.background)
     }
     
     private var selectionToolbar: some View {
@@ -442,128 +447,6 @@ struct ChecklistListView: View {
         .animation(AppTheme.Animations.standardCurve, value: animateListAppearance)
     }
     
-    private var leadingToolbarContent: some View {
-        Group {
-            if isSelectionMode {
-                Button("Cancel") {
-                    withAnimation(AppTheme.Animations.standardCurve) {
-                        isSelectionMode = false
-                        selectedChecklists.removeAll()
-                    }
-                }
-                .foregroundColor(AppTheme.Colors.primary)
-            } else {
-                Menu {
-                    Button {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            showingTagFilter.toggle()
-                            if showingTagFilter == false {
-                                selectedTagIDs.removeAll()
-                            }
-                        }
-                    } label: {
-                        Label("Filter by Tags", systemImage: "tag")
-                    }
-                    
-                    Button {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            isSelectionMode = true
-                        }
-                    } label: {
-                        Label("Select Checklists", systemImage: "checkmark.circle")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundColor(AppTheme.Colors.primary)
-                }
-            }
-        }
-    }
-    
-    private var trailingToolbarContent: some View {
-        Group {
-            if isSelectionMode {
-                Button("Select All") {
-                    withAnimation(AppTheme.Animations.standardCurve) {
-                        selectedChecklists = Set(filteredChecklists.map { $0.id })
-                    }
-                }
-                .foregroundColor(AppTheme.Colors.primary)
-            } else {
-                HStack(spacing: 16) {
-                    // Add button
-                    Button {
-                        showingAdd = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(AppTheme.Colors.primary)
-                    }
-                    .accessibilityLabel("Add Checklist")
-                    
-                    // Search button - keep only this search entry point
-                    Button {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            isShowingSearch.toggle()
-                            if isShowingSearch == false {
-                                searchText = ""
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.primary)
-                    }
-                    .accessibilityLabel("Search")
-                    
-                    // Select button
-                    Button {
-                        withAnimation(AppTheme.Animations.standardCurve) {
-                            isSelectionMode = true
-                        }
-                    } label: {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.primary)
-                    }
-                    .accessibilityLabel("Select Checklists")
-                }
-            }
-        }
-    }
-    
-    private var newChecklistSheet: some View {
-        NavigationView {
-            ChecklistEditorView(mode: .new, existingChecklist: nil)
-                .navigationTitle("New Checklist")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingAdd = false
-                        }
-                        .buttonStyle(PressableButtonStyle())
-                    }
-                }
-        }
-    }
-    
-    private func editChecklistSheet(_ checklist: ChecklistNote) -> some View {
-        NavigationView {
-            ChecklistEditorView(mode: .edit, existingChecklist: checklist)
-                .navigationTitle("Edit Checklist")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") {
-                            isEditing = false
-                        }
-                        .buttonStyle(PressableButtonStyle())
-                    }
-                }
-        }
-    }
-    
     @ViewBuilder
     private func checklistCardView(for checklist: ChecklistNote) -> some View {
         ChecklistCardView(
@@ -661,6 +544,37 @@ struct ChecklistListView: View {
         selectedChecklists.removeAll()
         withAnimation(AppTheme.Animations.standardCurve) {
             isSelectionMode = false
+        }
+    }
+    
+    private var trailingToolbarContent: some View {
+        HStack(spacing: 16) {
+            // Search button
+            Button(action: {
+                withAnimation(AppTheme.Animations.standardCurve) {
+                    isShowingSearch.toggle()
+                    if isShowingSearch == false {
+                        searchText = ""
+                    }
+                }
+            }) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(AppTheme.Colors.primary)
+            }
+            .accessibilityLabel("Search Checklists")
+            
+            // Select button for multi-selection
+            Button(action: {
+                withAnimation(AppTheme.Animations.standardCurve) {
+                    isSelectionMode = true
+                }
+            }) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(AppTheme.Colors.primary)
+            }
+            .accessibilityLabel("Select Checklists")
         }
     }
 }
