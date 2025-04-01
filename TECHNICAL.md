@@ -83,6 +83,10 @@ The app uses Core Data for persistent storage with the following entities:
 
 ### Persistence Management
 - `PersistenceController`: Manages the Core Data stack
+  - Enhanced recovery mechanisms for store corruption
+  - Robust error handling with fallback strategies
+  - Optimized batch delete operations for better performance
+  - Safe delete methods to prevent common Core Data issues
 - Automatic saving on context changes
 - Proper error handling for data operations
 - Efficient fetching with sort descriptors and predicates
@@ -119,6 +123,61 @@ The app uses Core Data for persistent storage with the following entities:
 - Optimized image handling
 - Memory management
 - Background context optimization
+
+## Recent Improvements
+
+### Core Data Enhancement (v0.3.2)
+- Implemented safer deletion mechanisms in the Core Data layer
+- Added batch delete operations for more efficient handling of multiple deletions
+- Created recovery mechanisms for handling Core Data store issues
+- Enhanced error logging and debugging capabilities
+- Improved transaction management for better reliability
+
+### UI/UX Enhancements (v0.3.2)
+- Fixed dark mode support across the entire app
+  - Replaced hardcoded colors with dynamic system colors
+  - Implemented proper color hierarchy for text and UI elements
+  - Enhanced contrast in both light and dark themes
+  - Improved shadow rendering in dark mode
+- Added proper accessibility support
+  - Enhanced VoiceOver descriptions for interactive elements
+  - Implemented appropriate accessibility traits
+  - Provided meaningful accessibility labels
+  - Fixed form control accessibility issues
+- Optimized UI layouts
+  - Reduced excessive spacing in Settings screen
+  - Improved list view layouts for better information density
+  - Enhanced section header styling
+  - Created more consistent padding throughout the app
+
+### Swipe Gesture Improvements (v0.3.1)
+- Implemented consistent swipe actions across the app
+- Added unified swipe-to-delete behavior with proper confirmation
+- Enhanced swipe-to-pin functionality
+- Added haptic feedback for improved user experience
+- Implemented proper visual cues during swipe interactions
+
+## Codebase Structure
+
+The MyNotes project is structured as follows:
+
+- `MyNotes/`
+  - `Models/` - Domain model objects
+  - `CoreData/` - Core Data entities and persistence controller
+  - `ViewModels/` - Store classes for business logic
+  - `Views/` - SwiftUI view components
+  - `UI/` - Design system components and theme
+    - `Components/` - Reusable UI elements
+    - `Theme.swift` - Centralized styling
+  - `Utilities/` - Helper functions and extensions
+
+## Performance Considerations
+
+- Efficient Core Data batch operations for list manipulations
+- Proper memory management with weak references
+- Background processing for intensive operations
+- Optimized list rendering with identifier-based diffing
+- Lazy loading of resources when appropriate
 
 ## Code Organization
 

@@ -17,13 +17,10 @@ struct SettingsView: View {
     @EnvironmentObject var checklistStore: ChecklistStore
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 // APPEARANCE SECTION
-                Section(header: Text("APPEARANCE")
-                            .font(.footnote)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)) {
+                Section {
                     // Theme picker
                     Picker("Theme", selection: $appTheme) {
                         Text("System").tag("system")
@@ -32,13 +29,13 @@ struct SettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .listRowBackground(AppTheme.Colors.cardSurface)
-                    .padding(.vertical, AppTheme.Dimensions.spacingXS)
+                    .padding(.vertical, AppTheme.Dimensions.spacingXXS)
                     .onChange(of: appTheme) { newValue in
                         applyThemeChange(newValue)
                     }
                     
                     // Font size slider with more compact design
-                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingXS) {
+                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingXXS) {
                         Text("Font Size: \(Int(fontSize))")
                             .font(.subheadline)
                             .foregroundColor(AppTheme.Colors.textPrimary)
@@ -48,7 +45,7 @@ struct SettingsView: View {
                                 applyFontSizeChange(newValue)
                             }
                     }
-                    .padding(.vertical, AppTheme.Dimensions.spacingXS)
+                    .padding(.vertical, AppTheme.Dimensions.spacingXXS)
                     
                     // Custom font toggle with Todoist-style switch
                     Toggle("Use Custom Font", isOn: $useCustomFont)
@@ -56,15 +53,17 @@ struct SettingsView: View {
                         .onChange(of: useCustomFont) { newValue in
                             applyCustomFontChange(newValue)
                         }
+                } header: {
+                    Text("APPEARANCE")
+                        .font(.footnote)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.top, 0)
                 }
-                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingS, trailing: AppTheme.Dimensions.spacingM))
+                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingXS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingXS, trailing: AppTheme.Dimensions.spacingM))
                 .textCase(nil)
                 
                 // DATA MANAGEMENT SECTION
-                Section(header: Text("DATA MANAGEMENT")
-                            .font(.footnote)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)) {
+                Section {
                     Button(action: {
                         exportNotes()
                     }) {
@@ -96,15 +95,17 @@ struct SettingsView: View {
                                 .foregroundColor(AppTheme.Colors.textSecondary)
                         }
                     }
+                } header: {
+                    Text("DATA MANAGEMENT")
+                        .font(.footnote)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.top, 0)
                 }
-                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingS, trailing: AppTheme.Dimensions.spacingM))
+                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingXS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingXS, trailing: AppTheme.Dimensions.spacingM))
                 .textCase(nil)
                 
                 // ADVANCED SECTION
-                Section(header: Text("ADVANCED")
-                            .font(.footnote)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)) {
+                Section {
                     Button(action: {
                         showResetConfirmation = true
                     }) {
@@ -126,15 +127,17 @@ struct SettingsView: View {
                             secondaryButton: .cancel()
                         )
                     }
+                } header: {
+                    Text("ADVANCED")
+                        .font(.footnote)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.top, 0)
                 }
-                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingS, trailing: AppTheme.Dimensions.spacingM))
+                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingXS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingXS, trailing: AppTheme.Dimensions.spacingM))
                 .textCase(nil)
                 
                 // ABOUT SECTION
-                Section(header: Text("ABOUT")
-                            .font(.footnote)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)) {
+                Section {
                     HStack {
                         Text("Version")
                             .foregroundColor(AppTheme.Colors.textPrimary)
@@ -142,18 +145,37 @@ struct SettingsView: View {
                         Text("1.0.0")
                             .foregroundColor(AppTheme.Colors.textSecondary)
                     }
+                } header: {
+                    Text("ABOUT")
+                        .font(.footnote)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .padding(.top, 0)
                 }
-                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingS, trailing: AppTheme.Dimensions.spacingM))
+                .listRowInsets(EdgeInsets(top: AppTheme.Dimensions.spacingXS, leading: AppTheme.Dimensions.spacingM, bottom: AppTheme.Dimensions.spacingXS, trailing: AppTheme.Dimensions.spacingM))
                 .textCase(nil)
             }
             .listStyle(InsetGroupedListStyle())
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Done") {
-                // Apply all settings and dismiss
-                applySettings()
-                dismiss()
-            })
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        // Apply all settings and dismiss
+                        applySettings()
+                        dismiss()
+                    }
+                    .foregroundColor(AppTheme.Colors.primary)
+                }
+            }
+            // Remove top spacing
+            .scrollContentBackground(.hidden)
+            .background(AppTheme.Colors.background)
+            // Minimize the top spacing
+            .environment(\.defaultMinListHeaderHeight, 10)
+            // Add more padding reduction
+            .safeAreaInset(edge: .top) {
+                Color.clear.frame(height: 0)
+            }
             .sheet(isPresented: $showExportSheet) {
                 // Export sheet UI would be here
                 NavigationView {

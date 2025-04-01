@@ -40,9 +40,17 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Clear search status messages
 
 - 💾 Data Persistence
-  - Core Data integration
-  - Local data storage
+  - Core Data integration with robust error handling
+  - Local data storage with batch operations
   - Automatic backups
+  - Safe deletion with recovery mechanisms
+
+- 🎨 UI & Accessibility
+  - Dark mode support with consistent appearance
+  - Dynamic typography adapting to system settings
+  - Haptic feedback for important actions
+  - Proper accessibility labels and traits
+  - Consistent spacing and visual hierarchy
 
 ## Installation
 
@@ -65,6 +73,22 @@ Feel free to submit issues and enhancement requests!
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Version History
+
+### v0.3.2 (2025-04-01)
+- Fixed UI inconsistencies and critical functionality:
+  - Enhanced dark mode support with dynamic colors
+  - Fixed Settings screen layout and removed excessive blank space
+  - Improved Core Data deletion functionality with error handling
+  - Added batch deletion for better performance
+  - Enhanced accessibility throughout the app
+  - Added proper UI feedback via haptics
+
+### v0.3.1 (2025-04-01)
+- Improved swipe actions:
+  - Added consistent swipe-to-delete functionality
+  - Implemented swipe-to-pin notes and checklists
+  - Enhanced visual feedback during swipe actions
+  - Added haptic feedback for improved user experience
 
 ### v0.2.6 (2025-04-01)
 - Fixed critical issues:
@@ -99,29 +123,30 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - UI/UX improvements:
   - Added character count display in search bar
   - Improved visual consistency across the app
-  - Enhanced search status messages
 
-### v0.2.2 (2025-03-31)
-- Implemented UI consistency across Note and Checklist editors
-- Created standardized button styles for navigation actions
-- Added consistent form field styling with icons
-- Improved visual hierarchy and spacing
-- Fixed build error with missing isRichTextEditorAvailable() function
-- Enhanced navigation bar consistency
+### v0.2.2 (2025-03-30)
+- Design system improvements:
+  - Modernized button styles for improved touch targets
+  - Enhanced visual feedback for interactive elements
+  - Improved contrast in selection states
+  - Standardized padding and spacing metrics
+  - Better responsiveness in list views
 
 ### v0.2.1 (2025-03-30)
-- Implemented robust search functionality across the app
-- Added unified global search capabilities
-- Created consistent search UI between Notes and Checklists
-- Fixed UI component errors in search implementation
-- Enhanced store classes with proper item retrieval methods
+- Fixed formatting toolbar issues:
+  - Replaced custom icons with SF Symbols
+  - Improved toolbar layout with better spacing
+  - Added haptic feedback for formatting actions
+  - Enhanced color picker with better UI
+  - Fixed toolbar appearance in landscape mode
 
 ### v0.2.0 (2025-03-30)
-- Fixed UUID casting issues in Core Data predicates
-- Moved checklist creation button to top-right toolbar for consistency
-- Improved tag relationship handling in Core Data
-- Fixed layout constraint warnings
-- Enhanced error handling in model-to-CDNote conversion
+- New design system implementation:
+  - Modernized color palette with semantic naming
+  - Enhanced typography system for better hierarchy
+  - Simplified spacing system with consistent rules
+  - Improved component styling
+  - Better dark mode support
 
 ### v0.1.9 (2025-03-30)
 - Fixed complex type-checking issues in ChecklistEditorView
