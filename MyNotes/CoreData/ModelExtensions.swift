@@ -270,6 +270,9 @@ extension CDChecklistNote {
                 let tags = try? context.fetch(tagRequest)
                 for tag in tags ?? [] {
                     cdChecklist.addToTags(tag)
+<<<<<<< HEAD
+>>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
+=======
 >>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
                 }
             }
