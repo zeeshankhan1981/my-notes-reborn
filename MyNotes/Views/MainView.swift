@@ -5,102 +5,118 @@ struct MainView: View {
     @StateObject private var checklistStore = ChecklistStore()
     @StateObject private var folderStore = FolderStore()
     @StateObject private var tagStore = TagStore()
-    @StateObject private var cloudSyncMonitor = CloudSyncMonitor()
     @State private var showingGlobalSearch = false
-    @State private var showingSyncInfo = false
-    @State private var showingCloudPopover = false
-    @State private var cloudPopoverAnchor: CGPoint = .zero
+    @State private var showingSettings = false
+    @State private var showingNewNote = false
+    @State private var showingNewChecklist = false
     
-    init() {
-        print("MainView initialized")
-    }
+    // Tab selection
+    @State private var selectedTab = 0
     
     var body: some View {
-        ZStack {
-            TabView {
-                NavigationView {
-                    NoteListView()
-                        .navigationBarItems(trailing: cloudStatusButton)
-                }
-                .tabItem { Label("Notes", systemImage: "note.text") }
-                .onAppear { print("NoteListView appeared") }
-                
-                NavigationView {
-                    ChecklistListView()
-                        .navigationBarItems(trailing: cloudStatusButton)
-                }
-                .tabItem { Label("Checklists", systemImage: "checklist") }
-                .onAppear { print("ChecklistListView appeared") }
-                
-                NavigationView {
-                    FolderManagerView()
-                        .navigationBarItems(trailing: cloudStatusButton)
-                }
-                .tabItem { Label("Folders", systemImage: "folder") }
-                .onAppear { print("FolderManagerView appeared") }
+        TabView(selection: $selectedTab) {
+            // NOTES TAB
+            NavigationStack {
+                NoteListView()
+                    .navigationTitle("Notes")
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button {
+                                showingSettings = true
+                            } label: {
+                                Image(systemName: "gear")
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button {
+                                showingNewNote = true
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                        }
+                    }
             }
+            .tabItem { 
+                Label("Notes", systemImage: "note.text") 
+            }
+            .tag(0)
             
-            if showingCloudPopover {
-                VStack {
-                    HStack {
-                        Spacer()
-                        CloudSyncPopover(monitor: cloudSyncMonitor, isPresented: $showingCloudPopover)
-                            .padding(.trailing, 8)
-                            .padding(.top, 8)
+            // CHECKLISTS TAB
+            NavigationStack {
+                ChecklistListView()
+                    .navigationTitle("Checklists")
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button {
+                                showingNewChecklist = true
+                            } label: {
+                                Image(systemName: "plus")
+                            }
+                        }
                     }
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation {
-                        showingCloudPopover = false
-                    }
-                }
             }
+            .tabItem { 
+                Label("Checklists", systemImage: "checklist") 
+            }
+            .tag(1)
+            
+            // FOLDERS TAB
+            NavigationStack {
+                FolderManagerView()
+                    .navigationTitle("Folders")
+            }
+            .tabItem { 
+                Label("Folders", systemImage: "folder") 
+            }
+            .tag(2)
         }
+        .tint(Color("AppPrimaryColor"))
         .environmentObject(noteStore)
         .environmentObject(checklistStore)
         .environmentObject(folderStore)
         .environmentObject(tagStore)
-        .environmentObject(cloudSyncMonitor)
         .sheet(isPresented: $showingGlobalSearch) {
-            GlobalSearchView()
-                .environmentObject(cloudSyncMonitor)
-        }
-        .sheet(isPresented: $showingSyncInfo) {
-            CloudSyncInfoView()
-                .environmentObject(cloudSyncMonitor)
-        }
-        .onAppear {
-            print("TabView appeared")
-            
-            // Check sync status
-            cloudSyncMonitor.checkCloudStatus()
-            
-            // Debug color assets
-            print("Color assets check:")
-            print("- AppPrimaryColor: \(AppTheme.Colors.primary)")
-            print("- AppSecondaryColor: \(AppTheme.Colors.secondary)")
-            print("- SecondaryBackground: \(AppTheme.Colors.secondaryBackground)")
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ShowCloudSyncDetails"))) { _ in
-            showingSyncInfo = true
-        }
-    }
-    
-    private var cloudStatusButton: some View {
-        Button(action: {
-            withAnimation(.spring()) {
-                showingCloudPopover.toggle()
+            NavigationStack {
+                GlobalSearchView()
+                    .navigationTitle("Search")
+                    .navigationBarTitleDisplayMode(.inline)
             }
-            
-            if showingCloudPopover {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.inline)
             }
-        }) {
-            CloudSyncStatusView(monitor: cloudSyncMonitor)
+        }
+        .sheet(isPresented: $showingNewNote) {
+            NavigationStack {
+                NoteEditorView(mode: .new, existingNote: nil)
+                    .navigationTitle("New Note")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                showingNewNote = false
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                // Save functionality is handled within NoteEditorView
+                                showingNewNote = false
+                            }
+                        }
+                    }
+            }
+        }
+        .sheet(isPresented: $showingNewChecklist) {
+            NavigationStack {
+                ChecklistEditorView(mode: .new, existingChecklist: nil)
+                    .navigationTitle("New Checklist")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
         }
     }
 }
