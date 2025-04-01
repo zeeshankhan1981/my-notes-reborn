@@ -66,6 +66,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
+### v0.2.6 (2025-04-01)
+- Fixed critical issues:
+  - Resolved build error in SettingsView with incorrect header implementation
+  - Updated project configuration to be iPhone-only
+  - Fixed app icon warnings in asset catalog
+  - Improved settings page functionality with working export/import buttons
+  - Enhanced overall app stability and reliability
+
 ### v0.2.5 (2025-03-31)
 - UI improvements:
   - Clean, minimalist cloud icon design

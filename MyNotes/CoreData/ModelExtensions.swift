@@ -28,13 +28,6 @@ extension CDNote {
         request.predicate = NSPredicate(format: "id == %@", note.id.uuidString)
         request.fetchLimit = 1
         
-<<<<<<< HEAD
-        if let existingNote = try? context.fetch(request).first {
-            cdNote = existingNote
-        } else {
-            cdNote = CDNote(context: context)
-            cdNote.id = note.id
-=======
         do {
             if let existingNote = try context.fetch(request).first {
                 cdNote = existingNote
@@ -97,49 +90,7 @@ extension CDNote {
             newNote.imageData = note.imageData
             newNote.attributedContent = note.attributedContent
             return newNote
->>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
         }
-        
-        // Update properties
-        cdNote.title = note.title
-        cdNote.content = note.content
-        cdNote.isPinned = note.isPinned
-        cdNote.date = note.date
-        cdNote.imageData = note.imageData
-        cdNote.attributedContent = note.attributedContent
-        
-        // Handle folder relationship if needed
-        if let folderID = note.folderID {
-            let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-            folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
-            if let folder = try? context.fetch(folderRequest).first {
-                cdNote.folder = folder
-            }
-        } else {
-            cdNote.folder = nil
-        }
-        
-        // Handle tag relationships
-        // First, remove any existing tag relationships
-        if let existingTags = cdNote.tags {
-            cdNote.removeFromTags(existingTags)
-        }
-        
-        // Then add the current tags
-        if !note.tagIDs.isEmpty {
-            let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-            // Convert UUIDs to strings to avoid casting issues
-            let tagIDStrings = note.tagIDs.map { $0.uuidString }
-            tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
-            
-            if let tags = try? context.fetch(tagRequest) {
-                for tag in tags {
-                    cdNote.addToTags(tag)
-                }
-            }
-        }
-        
-        return cdNote
     }
 }
 
@@ -201,16 +152,6 @@ extension CDChecklistNote {
         request.predicate = NSPredicate(format: "id == %@", checklist.id.uuidString)
         request.fetchLimit = 1
         
-<<<<<<< HEAD
-        if let existingChecklist = try? context.fetch(request).first {
-            cdChecklist = existingChecklist
-            
-            // Remove existing items to avoid duplicates
-            if let existingItems = cdChecklist.items {
-                for case let item as CDChecklistItem in existingItems {
-                    cdChecklist.removeFromItems(item)
-                    context.delete(item)
-=======
         do {
             if let existingChecklist = try context.fetch(request).first {
                 cdChecklist = existingChecklist
@@ -270,60 +211,28 @@ extension CDChecklistNote {
                 let tags = try? context.fetch(tagRequest)
                 for tag in tags ?? [] {
                     cdChecklist.addToTags(tag)
-<<<<<<< HEAD
->>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
-=======
->>>>>>> f179c6b (fix: Resolve UI issues with duplicate buttons and improve navigation)
                 }
             }
-        } else {
-            cdChecklist = CDChecklistNote(context: context)
-            cdChecklist.id = checklist.id
-        }
-        
-        // Update properties
-        cdChecklist.title = checklist.title
-        cdChecklist.date = checklist.date
-        cdChecklist.isPinned = checklist.isPinned
-        
-        // Handle folder relationship if needed
-        if let folderID = checklist.folderID {
-            let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-            folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
-            if let folder = try? context.fetch(folderRequest).first {
-                cdChecklist.folder = folder
-            }
-        } else {
-            cdChecklist.folder = nil
-        }
-        
-        // Add items
-        for item in checklist.items {
-            let cdItem = CDChecklistItem.fromDomainModel(item, in: context)
-            cdChecklist.addToItems(cdItem)
-        }
-        
-        // Handle tag relationships
-        // First, remove any existing tag relationships
-        if let existingTags = cdChecklist.tags {
-            cdChecklist.removeFromTags(existingTags)
-        }
-        
-        // Then add the current tags
-        if !checklist.tagIDs.isEmpty {
-            let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-            // Convert UUIDs to strings to avoid casting issues
-            let tagIDStrings = checklist.tagIDs.map { $0.uuidString }
-            tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
             
-            if let tags = try? context.fetch(tagRequest) {
-                for tag in tags {
-                    cdChecklist.addToTags(tag)
-                }
+            return cdChecklist
+            
+        } catch {
+            print("Error in fromDomainModel for ChecklistNote: \(error)")
+            // Create a new instance as fallback
+            let newChecklist = CDChecklistNote(context: context)
+            newChecklist.id = checklist.id
+            newChecklist.title = checklist.title
+            newChecklist.date = checklist.date
+            newChecklist.isPinned = checklist.isPinned
+            
+            // Add items
+            for item in checklist.items {
+                let cdItem = CDChecklistItem.fromDomainModel(item, in: context)
+                newChecklist.addToItems(cdItem)
             }
+            
+            return newChecklist
         }
-        
-        return cdChecklist
     }
 }
 

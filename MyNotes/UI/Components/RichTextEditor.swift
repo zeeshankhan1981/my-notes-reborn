@@ -177,7 +177,7 @@ struct RichTextEditor: UIViewRepresentable {
             case .textColor(let color):
                 attrString.addAttribute(.foregroundColor, value: color, range: range)
                 
-            case .insertLink(let url, let title):
+            case .insertLink(let url, _):
                 attrString.addAttribute(.link, value: url, range: range)
                 
             // Add cases for other formatting options as needed

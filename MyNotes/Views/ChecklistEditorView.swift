@@ -470,7 +470,7 @@ struct ChecklistEditorView: View {
     
     private func deleteItem(item: ChecklistItem) {
         if let index = items.firstIndex(where: { $0.id == item.id }) {
-            withAnimation {
+            _ = withAnimation {
                 items.remove(at: index)
             }
         }

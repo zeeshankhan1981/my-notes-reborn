@@ -84,13 +84,13 @@ struct NoteListView: View {
                         }
                 }
             }
-            .alert("Delete Notes", isPresented: $isShowingDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { }
+            .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
                     deleteSelectedNotes()
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(selectedNotes.count) note\(selectedNotes.count == 1 ? "" : "s")? This cannot be undone.")
+                Text("This action cannot be undone.")
             }
             .onChange(of: isEditing) { _, newValue in
                 if !newValue {
@@ -119,11 +119,12 @@ struct NoteListView: View {
             AppTheme.Colors.background
                 .ignoresSafeArea()
             
-            if isSelectionMode {
-                selectionToolbar
-            }
-            
             VStack(spacing: 0) {
+                if isSelectionMode {
+                    selectionToolbar
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
                 if isShowingSearch {
                     searchBar
                         .padding(.horizontal)
@@ -183,20 +184,6 @@ struct NoteListView: View {
                 }
             }
         }
-        .confirmationDialog("Are you sure you want to delete these notes?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                for id in selectedNotes {
-                    if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
-                        noteStore.delete(note: noteToDelete)
-                    }
-                }
-                selectedNotes.removeAll()
-                isSelectionMode = false
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action cannot be undone.")
-        }
     }
     
     private var selectionToolbar: some View {
@@ -228,6 +215,7 @@ struct NoteListView: View {
             .padding(.horizontal)
             .padding(.vertical, 10)
             
+            // Only show the delete button when there are selected notes
             if !selectedNotes.isEmpty {
                 Button(action: {
                     isShowingDeleteConfirmation = true
@@ -246,7 +234,6 @@ struct NoteListView: View {
             }
         }
         .background(AppTheme.Colors.secondaryBackground)
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
     
     private var searchBar: some View {
@@ -346,16 +333,19 @@ struct NoteListView: View {
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
-                    if value.translation.width < 0 {
-                        // Swiped left - delete
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.warning)
-                        noteStore.delete(note: note)
-                    } else if value.translation.width > 0 {
-                        // Swiped right - toggle pin
-                        let generator = UIImpactFeedbackGenerator(style: .medium)
-                        generator.impactOccurred()
-                        noteStore.togglePin(note: note)
+                    // Only allow swipe gestures when not in selection mode
+                    if !isSelectionMode {
+                        if value.translation.width < -50 {
+                            // Swiped left - delete
+                            let generator = UINotificationFeedbackGenerator()
+                            generator.notificationOccurred(.warning)
+                            noteStore.delete(note: note)
+                        } else if value.translation.width > 50 {
+                            // Swiped right - toggle pin
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+                            noteStore.togglePin(note: note)
+                        }
                     }
                 }
         )
@@ -364,7 +354,7 @@ struct NoteListView: View {
     private var trailingToolbarContent: some View {
         Group {
             if isSelectionMode {
-                // Already showing selection toolbar at the top
+                // No additional content needed when in selection mode
                 EmptyView()
             } else {
                 HStack(spacing: 16) {
@@ -400,24 +390,6 @@ struct NoteListView: View {
         }
     }
     
-    // MARK: - Helper Functions
-    
-    private func handleLongPress(for note: Note) {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-        
-        withAnimation {
-            if isSelectionMode {
-                // Already in selection mode, toggle this note
-                toggleSelection(for: note)
-            } else {
-                // Enter selection mode and select this note
-                isSelectionMode = true
-                selectedNotes.insert(note.id)
-            }
-        }
-    }
-    
     private func toggleSelection(for note: Note) {
         if selectedNotes.contains(note.id) {
             selectedNotes.remove(note.id)
@@ -434,20 +406,19 @@ struct NoteListView: View {
     }
     
     private func deleteSelectedNotes() {
-        // Create a temporary copy to avoid modification during iteration
-        let notesToDelete = selectedNotes
+        // Use haptic feedback for deletion
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.warning)
         
-        // Delete the notes
-        for id in notesToDelete {
+        // Delete all selected notes
+        for id in selectedNotes {
             if let noteToDelete = noteStore.notes.first(where: { $0.id == id }) {
                 noteStore.delete(note: noteToDelete)
             }
         }
         
-        // Clear selection and exit selection mode
+        // Reset selection state
         selectedNotes.removeAll()
-        withAnimation {
-            isSelectionMode = false
-        }
+        isSelectionMode = false
     }
 }

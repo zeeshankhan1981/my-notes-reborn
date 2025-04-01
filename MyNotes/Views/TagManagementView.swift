@@ -43,7 +43,7 @@ struct TagManagementView: View {
                                 tagStore.update(tag: editTag, name: newTagName, color: selectedColor)
                                 editingTag = nil
                             } else {
-                                tagStore.addTag(name: newTagName, color: selectedColor)
+                                _ = tagStore.addTag(name: newTagName, color: selectedColor)
                             }
                             newTagName = ""
                             selectedColor = .blue

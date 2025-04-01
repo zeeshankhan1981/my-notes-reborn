@@ -225,12 +225,12 @@ struct NoteEditorView: View {
                                 )
                                 .padding(.horizontal, AppTheme.Dimensions.spacing)
                             }
-                        }
-                    }
-                    .onChange(of: selectedItem) { newItem in
-                        Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                                imageData = data
+                            .onChange(of: selectedItem) { oldValue, newValue in
+                                Task {
+                                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
+                                        imageData = data
+                                    }
+                                }
                             }
                         }
                     }

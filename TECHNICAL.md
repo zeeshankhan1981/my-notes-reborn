@@ -138,6 +138,35 @@ MyNotes/
 - Views: PascalCase (e.g., `NoteListView.swift`)
 - CoreData: PascalCase with CD prefix (e.g., `CDNote.swift`)
 
+## Recent Changes (v0.2.6)
+
+### Build and Configuration Improvements
+- Fixed critical build issues:
+  - Resolved build error in SettingsView by updating to standard SwiftUI Section header syntax
+  - Configured project as iPhone-only by updating TARGETED_DEVICE_FAMILY to "1" in project settings
+  - Addressed app icon warnings in asset catalog
+  
+### UI/UX Improvements
+- Enhanced Settings screen functionality:
+  - Implemented working UI for export/import capabilities
+  - Added proper confirmation dialogs for destructive actions
+  - Improved visual styling with consistent fonts and spacing
+  - Added proper feedback for user actions with alerts and haptics
+  
+### Code Quality Improvements
+- Updated deprecated API usages:
+  - Replaced custom header modifier with standard SwiftUI Section(header:) pattern
+  - Ensured all components follow iOS 17+ best practices
+  - Enhanced error handling and user feedback
+
+## Recent Changes (v0.2.5)
+
+### UI Improvements
+- Simplified search interface:
+  - Removed redundant floating search button from MainView
+  - Maintained single search icon in toolbar for consistency
+  - Improved visual coherence across the app
+
 ## Recent Changes (v0.2.4)
 
 ### UI Improvements
@@ -447,6 +476,18 @@ MyNotes/
 - Code review required
 
 ## Version History
+
+### v0.2.6 (2025-04-01)
+- Fixed critical build issues:
+  - Resolved build error in SettingsView by updating to standard SwiftUI Section header syntax
+  - Configured project as iPhone-only by updating TARGETED_DEVICE_FAMILY to "1" in project settings
+  - Addressed app icon warnings in asset catalog
+  
+### v0.2.5 (2025-03-31)
+- Simplified search interface:
+  - Removed redundant floating search button from MainView
+  - Maintained single search icon in toolbar for consistency
+  - Improved visual coherence across the app
 
 ### v0.2.4 (2025-04-01)
 - Simplified search interface:
