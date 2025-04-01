@@ -58,7 +58,8 @@ class ChecklistStore: ObservableObject {
                 ],
                 isPinned: true,
                 date: Date(),
-                tagIDs: []
+                tagIDs: [],
+                priority: .none
             )
             saveChecklist(groceryList)
             
@@ -74,7 +75,8 @@ class ChecklistStore: ObservableObject {
                 ],
                 isPinned: false,
                 date: Date().addingTimeInterval(-3600), // 1 hour ago
-                tagIDs: []
+                tagIDs: [],
+                priority: .none
             )
             saveChecklist(todoList)
             
@@ -84,7 +86,7 @@ class ChecklistStore: ObservableObject {
         }
     }
 
-    func addChecklist(title: String, folderID: UUID?, tagIDs: [UUID] = []) {
+    func addChecklist(title: String, folderID: UUID?, tagIDs: [UUID] = [], priority: Priority = .none) {
         let context = persistence.container.viewContext
         let newChecklist = ChecklistNote(
             id: UUID(), 
@@ -93,7 +95,8 @@ class ChecklistStore: ObservableObject {
             items: [], 
             isPinned: false, 
             date: Date(),
-            tagIDs: tagIDs
+            tagIDs: tagIDs,
+            priority: priority
         )
         
         _ = CDChecklistNote.fromDomainModel(newChecklist, in: context)
@@ -117,13 +120,14 @@ class ChecklistStore: ObservableObject {
         loadChecklists()
     }
     
-    func updateChecklist(checklist: ChecklistNote, title: String, items: [ChecklistItem], folderID: UUID?, tagIDs: [UUID] = []) {
+    func updateChecklist(checklist: ChecklistNote, title: String, items: [ChecklistItem], folderID: UUID?, tagIDs: [UUID] = [], priority: Priority = .none) {
         var updatedChecklist = checklist
         updatedChecklist.title = title
         updatedChecklist.items = items
         updatedChecklist.folderID = folderID
         updatedChecklist.date = Date()
         updatedChecklist.tagIDs = tagIDs
+        updatedChecklist.priority = priority
         
         updateChecklist(checklist: updatedChecklist)
     }

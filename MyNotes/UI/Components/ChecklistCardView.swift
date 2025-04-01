@@ -33,23 +33,32 @@ struct ChecklistCardView: View {
                         .font(.system(size: AppTheme.Dimensions.smallIconSize))
                         .foregroundColor(AppTheme.Colors.primary)
                 }
+                
+                // Add priority indicator if priority is not none
+                if checklist.priority != .none {
+                    PriorityIndicator(priority: checklist.priority, size: 14, showBackground: true)
+                        .padding(.leading, 4)
+                }
             }
             
             // Items preview - show more compact, Todoist style
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(previewItems.enumerated()), id: \.element.id) { index, item in
                     HStack(alignment: .center, spacing: 8) {
-                        Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 14))
-                            .foregroundColor(item.isDone ? AppTheme.Colors.success : AppTheme.Colors.textTertiary)
+                        AnimatedCheckbox(isChecked: .constant(item.isDone), size: 16)
                         
-                        Text(item.text)
-                            .font(AppTheme.Typography.body())
-                            .foregroundColor(item.isDone ? AppTheme.Colors.textTertiary : AppTheme.Colors.textPrimary)
-                            .strikethrough(item.isDone)
-                            .lineLimit(1)
+                        AnimatedStrikethroughText(
+                            text: item.text, 
+                            isStrikethrough: .constant(item.isDone),
+                            font: AppTheme.Typography.body(),
+                            foregroundColor: AppTheme.Colors.textPrimary,
+                            strikethroughColor: AppTheme.Colors.textTertiary
+                        )
+                        .lineLimit(1)
                     }
                     .padding(.vertical, 2) // Tighter spacing between items
+                    .opacity(item.isDone ? 0.8 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: item.isDone)
                 }
                 
                 if checklist.items.count > 3 {

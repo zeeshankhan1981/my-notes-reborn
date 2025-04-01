@@ -22,6 +22,7 @@ struct NoteEditorView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedFolderID: UUID?
     @State private var tagIDs = [UUID]()
+    @State private var priority = Priority.none
     @State private var isShowingFormatting = false
     @State private var isFocusMode = false
     @State private var isShowingDeleteConfirmation = false
@@ -37,6 +38,7 @@ struct NoteEditorView: View {
             _imageData = State(initialValue: note.imageData)
             _selectedFolderID = State(initialValue: note.folderID)
             _tagIDs = State(initialValue: note.tagIDs)
+            _priority = State(initialValue: note.priority)
             
             // Initialize attributedContent from data if available
             if let attributedContentData = note.attributedContent,
@@ -159,7 +161,7 @@ struct NoteEditorView: View {
                 }
                 
                 // Content field
-                FormFieldView(label: "Content", iconName: "text.justify") {
+                FormFieldView(label: "Content", iconName: "text.quote") {
                     VStack(alignment: .trailing, spacing: AppTheme.Dimensions.smallSpacing) {
                         if isRichTextEditorAvailable() {
                             RichTextEditor(
@@ -209,6 +211,12 @@ struct NoteEditorView: View {
                             .buttonStyle(PressableButtonStyle())
                         }
                     }
+                }
+                
+                // Priority selector
+                FormFieldView(label: "Priority", iconName: "flag") {
+                    PrioritySelector(selectedPriority: $priority)
+                        .padding(.vertical, 8)
                 }
                 
                 // Image field
@@ -347,7 +355,8 @@ struct NoteEditorView: View {
                 folderID: selectedFolderID,
                 imageData: imageData,
                 attributedContent: attributedContentData,
-                tagIDs: tagIDs
+                tagIDs: tagIDs,
+                priority: priority
             )
         } else if let note = existingNote {
             noteStore.update(
@@ -357,7 +366,8 @@ struct NoteEditorView: View {
                 folderID: selectedFolderID,
                 imageData: imageData,
                 attributedContent: attributedContentData,
-                tagIDs: tagIDs
+                tagIDs: tagIDs,
+                priority: priority
             )
         }
     }

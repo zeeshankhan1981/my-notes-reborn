@@ -281,57 +281,12 @@ struct ChecklistListView: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: AppTheme.Dimensions.spacingL) {
-            ZStack {
-                Circle()
-                    .fill(AppTheme.Colors.cardSurface)
-                    .frame(width: 100, height: 100)
-                    .shadow(color: AppTheme.Colors.cardShadow.opacity(0.1), radius: 5, x: 0, y: 2)
-                
-                Image(systemName: "checklist")
-                    .font(.system(size: 40))
-                    .foregroundColor(AppTheme.Colors.primary)
+        EmptyStateView(
+            type: .checklists,
+            searchText: searchText,
+            actionButtonTitle: "New Checklist") {
+                showingAdd = true
             }
-            .padding(.bottom, 10)
-            
-            VStack(spacing: AppTheme.Dimensions.spacingS) {
-                if searchText.isEmpty {
-                    Text("No Checklists")
-                        .font(AppTheme.Typography.title())
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                    
-                    Text("Create a checklist to track tasks or lists")
-                        .font(AppTheme.Typography.body())
-                        .foregroundColor(AppTheme.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                } else {
-                    Text("No Results")
-                        .font(AppTheme.Typography.title())
-                        .foregroundColor(AppTheme.Colors.textPrimary)
-                    
-                    Text("Try a different search query")
-                        .font(AppTheme.Typography.body())
-                        .foregroundColor(AppTheme.Colors.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            
-            if searchText.isEmpty && !isSelectionMode {
-                Button(action: {
-                    showingAdd = true
-                }) {
-                    Label("Create Checklist", systemImage: "plus")
-                        .font(AppTheme.Typography.body())
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(AppTheme.Colors.primary)
-                        .cornerRadius(8)
-                }
-                .buttonStyle(PressableButtonStyle())
-            }
-        }
-        .padding(.horizontal, 30)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     private func checklistCardView(for checklist: ChecklistNote) -> some View {

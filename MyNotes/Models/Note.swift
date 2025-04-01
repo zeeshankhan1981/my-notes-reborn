@@ -10,6 +10,7 @@ struct Note: Identifiable, Codable, Equatable {
     var imageData: Data?
     var attributedContent: Data? // Stores NSAttributedString data
     var tagIDs: [UUID] // IDs of associated tags
+    var priority: Priority // Added priority property
     
     // For equatable conformance
     static func == (lhs: Note, rhs: Note) -> Bool {
@@ -18,10 +19,10 @@ struct Note: Identifiable, Codable, Equatable {
     
     // For encoding and decoding attributedContent
     enum CodingKeys: String, CodingKey {
-        case id, title, content, folderID, isPinned, date, imageData, attributedContent, tagIDs
+        case id, title, content, folderID, isPinned, date, imageData, attributedContent, tagIDs, priority
     }
     
-    init(id: UUID, title: String, content: String, folderID: UUID?, isPinned: Bool, date: Date, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
+    init(id: UUID, title: String, content: String, folderID: UUID?, isPinned: Bool, date: Date, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
         self.id = id
         self.title = title
         self.content = content
@@ -31,5 +32,6 @@ struct Note: Identifiable, Codable, Equatable {
         self.imageData = imageData
         self.attributedContent = attributedContent
         self.tagIDs = tagIDs
+        self.priority = priority
     }
 }

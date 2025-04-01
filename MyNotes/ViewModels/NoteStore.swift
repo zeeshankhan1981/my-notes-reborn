@@ -54,7 +54,8 @@ class NoteStore: ObservableObject {
                 folderID: nil, 
                 imageData: nil,
                 attributedContent: nil,
-                tagIDs: []
+                tagIDs: [],
+                priority: .none
             )
             
             // Add a pinned note
@@ -67,7 +68,8 @@ class NoteStore: ObservableObject {
                 date: Date(),
                 imageData: nil,
                 attributedContent: nil,
-                tagIDs: []
+                tagIDs: [],
+                priority: .none
             )
             saveNote(pinnedNote)
             
@@ -77,7 +79,7 @@ class NoteStore: ObservableObject {
         }
     }
     
-    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
+    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
         let context = persistence.container.viewContext
         let newNote = Note(
             id: UUID(), 
@@ -88,7 +90,8 @@ class NoteStore: ObservableObject {
             date: Date(), 
             imageData: imageData,
             attributedContent: attributedContent,
-            tagIDs: tagIDs
+            tagIDs: tagIDs,
+            priority: priority
         )
         
         _ = CDNote.fromDomainModel(newNote, in: context)
@@ -97,7 +100,7 @@ class NoteStore: ObservableObject {
         loadNotes()
     }
     
-    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = []) {
+    func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
         let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.title = title
@@ -107,6 +110,7 @@ class NoteStore: ObservableObject {
         updatedNote.date = Date()
         updatedNote.attributedContent = attributedContent
         updatedNote.tagIDs = tagIDs
+        updatedNote.priority = priority
         
         _ = CDNote.fromDomainModel(updatedNote, in: context)
         

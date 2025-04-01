@@ -25,6 +25,8 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Rich text formatting in checklists
   - Tag support for checklists
   - Clean, minimal UI with no unnecessary spacing
+  - Satisfying completion animations
+  - Priority levels for better task management
 
 - 📁 Folder Organization
   - Organize notes into folders
@@ -51,6 +53,12 @@ A modern, minimalist note-taking app built with SwiftUI and Core Data, inspired 
   - Haptic feedback for important actions
   - Proper accessibility labels and traits
   - Consistent spacing and visual hierarchy
+- 🚀 Todoist-Inspired UI Enhancements
+  - Task completion animations with haptic feedback
+  - Engaging empty state designs with illustrations
+  - Priority visualization (none, low, medium, high)
+  - Interactive priority selector
+  - Animated strikethrough text for completed items
 
 ## Installation
 

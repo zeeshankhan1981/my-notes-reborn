@@ -16,7 +16,8 @@ extension CDNote {
             date: date ?? Date(),
             imageData: imageData,
             attributedContent: attributedContent,
-            tagIDs: tagIDs
+            tagIDs: tagIDs,
+            priority: Priority(rawValue: Int(priorityValue)) ?? .none
         )
     }
     
@@ -45,6 +46,7 @@ extension CDNote {
             cdNote.date = note.date
             cdNote.imageData = note.imageData
             cdNote.attributedContent = note.attributedContent
+            cdNote.priorityValue = Int16(note.priority.rawValue)
             
             // Handle folder relationship if needed
             if let folderID = note.folderID {
@@ -89,6 +91,7 @@ extension CDNote {
             newNote.date = note.date
             newNote.imageData = note.imageData
             newNote.attributedContent = note.attributedContent
+            newNote.priorityValue = Int16(note.priority.rawValue)
             return newNote
         }
     }
@@ -140,7 +143,8 @@ extension CDChecklistNote {
             items: domainItems,
             isPinned: isPinned,
             date: date ?? Date(),
-            tagIDs: tagIDs
+            tagIDs: tagIDs,
+            priority: Priority(rawValue: Int(priorityValue)) ?? .none
         )
     }
     
@@ -177,6 +181,7 @@ extension CDChecklistNote {
             cdChecklist.title = checklist.title
             cdChecklist.date = checklist.date
             cdChecklist.isPinned = checklist.isPinned
+            cdChecklist.priorityValue = Int16(checklist.priority.rawValue)
             
             // Handle folder relationship if needed
             if let folderID = checklist.folderID {
@@ -224,6 +229,7 @@ extension CDChecklistNote {
             newChecklist.title = checklist.title
             newChecklist.date = checklist.date
             newChecklist.isPinned = checklist.isPinned
+            newChecklist.priorityValue = Int16(checklist.priority.rawValue)
             
             // Add items
             for item in checklist.items {

@@ -255,22 +255,12 @@ struct NoteListView: View {
     }
     
     private var emptyStateView: some View {
-        VStack(spacing: AppTheme.Dimensions.spacing) {
-            Image(systemName: "note.text")
-                .font(.largeTitle)
-                .foregroundColor(AppTheme.Colors.textTertiary)
-            
-            Text(searchText.isEmpty ? "No Notes" : "No Results")
-                .font(AppTheme.Typography.title())
-                .foregroundColor(AppTheme.Colors.textPrimary)
-            
-            Text(searchText.isEmpty ? "Tap + to create a new note" : "Try a different search")
-                .font(AppTheme.Typography.body())
-                .foregroundColor(AppTheme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        EmptyStateView(
+            type: .notes,
+            searchText: searchText,
+            actionButtonTitle: "New Note") {
+                showingAdd = true
+            }
     }
     
     private var newNoteSheet: some View {
@@ -293,72 +283,47 @@ struct NoteListView: View {
         NoteCardView(
             note: note,
             onTap: {
-                if isSelectionMode {
-                    toggleSelection(for: note)
-                } else {
-                    selectedNote = note
-                }
+                selectedNote = note
             },
             onDelete: {
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.warning)
                 noteStore.delete(note: note)
             },
             onLongPress: {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-                
                 if isSelectionMode {
-                    toggleSelection(for: note)
+                    toggleNoteSelection(note)
                 } else {
-                    noteStore.togglePin(note: note)
+                    withAnimation {
+                        isSelectionMode = true
+                        selectedNotes.insert(note.id)
+                    }
+                    // Add haptic feedback
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
                 }
             },
             isInSelectionMode: isSelectionMode,
             isSelected: selectedNotes.contains(note.id)
         )
-        .contextMenu {
-            Button(action: {
-                noteStore.togglePin(note: note)
-            }) {
-                Label(note.isPinned ? "Unpin" : "Pin", systemImage: note.isPinned ? "pin.slash" : "pin")
-            }
-            
-            Button(action: {
-                // Share functionality
-            }) {
-                Label("Share", systemImage: "square.and.arrow.up")
-            }
-            
-            Divider()
-            
-            Button(role: .destructive, action: {
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.warning)
-                noteStore.delete(note: note)
-            }) {
-                Label("Delete", systemImage: "trash")
-            }
+        .buttonStyle(PlainButtonStyle()) // Remove default button style
+        .contentShape(Rectangle())
+        .pressableStyle() // Add our custom pressable style
+        .slideInAnimation(from: .bottom) // Add slide-in animation
+    }
+    
+    private var addButton: some View {
+        Button(action: {
+            showingAdd = true
+        }) {
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .frame(width: 56, height: 56)
+                .foregroundColor(.white)
+                .background(AppTheme.Colors.primary)
+                .clipShape(Circle())
+                .shadow(color: AppTheme.Colors.primary.opacity(0.3), radius: 5, x: 0, y: 3)
         }
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    // Only allow swipe gestures when not in selection mode
-                    if !isSelectionMode {
-                        if value.translation.width < -50 {
-                            // Swiped left - delete
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.warning)
-                            noteStore.delete(note: note)
-                        } else if value.translation.width > 50 {
-                            // Swiped right - toggle pin
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            noteStore.togglePin(note: note)
-                        }
-                    }
-                }
-        )
+        .buttonStyle(PrimaryButtonStyle()) // Use our custom button style
+        .transition(.scale)
     }
     
     private var trailingToolbarContent: some View {
@@ -400,7 +365,7 @@ struct NoteListView: View {
         }
     }
     
-    private func toggleSelection(for note: Note) {
+    private func toggleNoteSelection(_ note: Note) {
         if selectedNotes.contains(note.id) {
             selectedNotes.remove(note.id)
             

@@ -10,12 +10,14 @@ MyNotes follows a clean architecture pattern with the following main components:
 - `ChecklistItem`: Individual items within a checklist
 - `Folder`: Container for organizing notes and checklists
 - `Tag`: Categorization system for notes and checklists
+- `Priority`: Represents task priority levels (none, low, medium, high) with visual indicators
 
 ### 2. ViewModels
 - `NoteStore`: Manages note-related operations
 - `ChecklistStore`: Manages checklist-related operations
 - `FolderStore`: Manages folder-related operations
 - `TagStore`: Manages tags and their relationships
+- `PriorityStore`: Manages task priority levels and their visual indicators
 
 ### 3. Views
 - `MainView`: Tab-based navigation between Notes, Checklists, and Folders
@@ -27,6 +29,7 @@ MyNotes follows a clean architecture pattern with the following main components:
 - `TagManagementView`: Tag creation and management
 - `TagSelectorView`: Tag selection interface
 - `TagFilterView`: Tag-based filtering interface
+- `PrioritySelectorView`: Priority selection interface
 
 ## Core Data Implementation
 
@@ -39,8 +42,10 @@ The app uses Core Data for persistent storage with the following entities:
   - title (String)
   - content (String)
   - imageData (Binary)
+  - attributedContent (Binary)
   - isPinned (Boolean)
   - date (Date)
+  - priorityValue (Integer 16) - Stores the raw value of the priority enum
 - Relationships:
   - folder (to-one relationship with CDFolder)
   - tags (to-many relationship with CDTags)
@@ -51,6 +56,7 @@ The app uses Core Data for persistent storage with the following entities:
   - title (String)
   - isPinned (Boolean)
   - date (Date)
+  - priorityValue (Integer 16) - Stores the raw value of the priority enum
 - Relationships:
   - folder (to-one relationship with CDFolder)
   - items (to-many relationship with CDChecklistItem)
@@ -73,6 +79,15 @@ The app uses Core Data for persistent storage with the following entities:
   - checklists (to-many relationship with CDChecklistNote)
 
 #### CDTags
+- Properties:
+  - id (UUID)
+  - name (String)
+  - color (String)
+- Relationships:
+  - notes (to-many relationship with CDNote)
+  - checklists (to-many relationship with CDChecklistNote)
+
+#### CDPriority
 - Properties:
   - id (UUID)
   - name (String)
@@ -116,6 +131,13 @@ The app uses Core Data for persistent storage with the following entities:
 - Minimalist design inspired by iA Writer
 - Custom layout components
 - Reusable UI elements
+#### Reusable Components
+- `AnimatedCheckbox`: Enhanced checkbox with animations for task completion
+- `AnimatedStrikethroughText`: Text with animated strikethrough effect for completed items
+- `EmptyStateView`: Provides engaging empty state designs with illustrations
+- `FormFieldView`: Consistent form field layout
+- `PriorityIndicator`: Visual representation of task priority levels
+- `PrioritySelector`: Interactive component for selecting task priorities
 
 ### Performance Optimizations
 - Lazy loading of content

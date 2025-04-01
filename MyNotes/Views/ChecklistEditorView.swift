@@ -20,6 +20,7 @@ struct ChecklistEditorView: View {
     @State private var newItem = ""
     @State private var selectedFolderID: UUID?
     @State private var tagIDs: [UUID] = []
+    @State private var priority: Priority = .none
     @State private var animateList = false
     @State private var focusedField: UUID?
     @FocusState private var isAddingNewItem: Bool
@@ -35,6 +36,7 @@ struct ChecklistEditorView: View {
             _items = State(initialValue: checklist.items)
             _selectedFolderID = State(initialValue: checklist.folderID)
             _tagIDs = State(initialValue: checklist.tagIDs)
+            _priority = State(initialValue: checklist.priority)
         }
     }
     
@@ -47,6 +49,7 @@ struct ChecklistEditorView: View {
             _items = State(initialValue: checklist.items)
             _selectedFolderID = State(initialValue: checklist.folderID)
             _tagIDs = State(initialValue: checklist.tagIDs)
+            _priority = State(initialValue: checklist.priority)
         } else {
             self.mode = .new
             self.existingChecklist = nil
@@ -163,6 +166,12 @@ struct ChecklistEditorView: View {
                 // Folder selection
                 FormFieldView(label: "Folder", iconName: "folder") {
                     folderSelector
+                }
+                
+                // Priority selector
+                FormFieldView(label: "Priority", iconName: "flag") {
+                    PrioritySelector(selectedPriority: $priority)
+                        .padding(.vertical, 8)
                 }
                 
                 // Tag selection
@@ -465,27 +474,22 @@ struct ChecklistEditorView: View {
     }
     
     private func saveChecklist() {
-        if let checklist = existingChecklist, mode == .edit {
-            // Create updated checklist with the new properties
-            var updatedChecklist = checklist
-            updatedChecklist.title = title
-            updatedChecklist.items = items
-            updatedChecklist.folderID = selectedFolderID
-            updatedChecklist.tagIDs = tagIDs
-            
-            // Update the checklist
-            checklistStore.updateChecklist(checklist: updatedChecklist)
-        } else {
-            // Create a new checklist - passing individual properties
-            // instead of the entire ChecklistNote object
+        if mode == .new {
             checklistStore.addChecklist(
-                title: title,
+                title: title, 
                 folderID: selectedFolderID,
-                tagIDs: tagIDs
+                tagIDs: tagIDs,
+                priority: priority
             )
-            
-            // The items will be empty initially
-            // We'll add them separately if needed or update the API
+        } else if let checklist = existingChecklist {
+            checklistStore.updateChecklist(
+                checklist: checklist, 
+                title: title, 
+                items: items,
+                folderID: selectedFolderID,
+                tagIDs: tagIDs,
+                priority: priority
+            )
         }
         
         // Add haptic feedback
@@ -572,11 +576,17 @@ struct ChecklistItemRow: View {
     }
     
     private var textFieldView: some View {
-        TextField("Item description", text: $item.text)
-            .font(AppTheme.Typography.body())
-            .foregroundColor(textColor)
-            .strikethrough(item.isDone)
-            .focused($isTextFieldFocused)
+        AnimatedStrikethroughText(
+            text: item.text.isEmpty ? "Item description" : item.text,
+            isStrikethrough: $item.isDone,
+            foregroundColor: item.text.isEmpty ? AppTheme.Colors.textTertiary : AppTheme.Colors.textPrimary
+        )
+        .opacity(item.text.isEmpty ? 0.7 : 1.0)
+        .overlay(
+            TextField("", text: $item.text)
+                .opacity(0.01) // Nearly invisible but still functional
+                .focused($isTextFieldFocused)
+        )
     }
     
     private var deleteButtonView: some View {

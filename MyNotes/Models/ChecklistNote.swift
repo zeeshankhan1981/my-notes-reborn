@@ -8,6 +8,7 @@ struct ChecklistNote: Identifiable, Codable, Equatable {
     var isPinned: Bool
     var date: Date
     var tagIDs: [UUID] // IDs of associated tags
+    var priority: Priority // Added priority property
     
     // For equatable conformance
     static func == (lhs: ChecklistNote, rhs: ChecklistNote) -> Bool {
@@ -16,7 +17,7 @@ struct ChecklistNote: Identifiable, Codable, Equatable {
     
     // For coding keys
     enum CodingKeys: String, CodingKey {
-        case id, title, folderID, items, isPinned, date, tagIDs
+        case id, title, folderID, items, isPinned, date, tagIDs, priority
     }
     
     init(id: UUID = UUID(), 
@@ -25,7 +26,8 @@ struct ChecklistNote: Identifiable, Codable, Equatable {
          items: [ChecklistItem] = [], 
          isPinned: Bool = false, 
          date: Date = Date(),
-         tagIDs: [UUID] = []) {
+         tagIDs: [UUID] = [],
+         priority: Priority = .none) {
         self.id = id
         self.title = title
         self.folderID = folderID
@@ -33,5 +35,6 @@ struct ChecklistNote: Identifiable, Codable, Equatable {
         self.isPinned = isPinned
         self.date = date
         self.tagIDs = tagIDs
+        self.priority = priority
     }
 }

@@ -34,6 +34,12 @@ struct NoteCardView: View {
                         .font(.caption)
                         .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.7))
                 }
+                
+                // Add priority indicator if priority is not none
+                if note.priority != .none {
+                    PriorityIndicator(priority: note.priority, size: 14)
+                        .padding(.leading, 4)
+                }
             }
             
             // Content preview
