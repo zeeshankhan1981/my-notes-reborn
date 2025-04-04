@@ -9,143 +9,132 @@ struct NoteCardView: View {
     let isSelected: Bool
     
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isPressed = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-            // Title and pin indicator
-            HStack {
-                if isInSelectionMode {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 22))
-                        .foregroundColor(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary)
-                        .padding(.trailing, 6)
-                }
-                
-                Text(note.title)
-                    .font(AppTheme.Typography.headline())
-                    .fontWeight(.medium)
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-                    .lineLimit(1)
-                
-                Spacer()
-                
-                if note.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.caption)
-                        .foregroundColor(AppTheme.Colors.textSecondary.opacity(0.7))
-                }
-            }
-            
-            // Content preview
-            if !note.content.isEmpty {
-                Text(note.content)
-                    .font(AppTheme.Typography.body())
-                    .foregroundColor(AppTheme.Colors.textSecondary)
-                    .lineLimit(3)
-                    .padding(.bottom, 4)
-            }
-            
-            // Date and metadata
-            HStack {
-                Text(formattedDate)
-                    .font(AppTheme.Typography.caption())
-                    .foregroundColor(AppTheme.Colors.textTertiary)
-                
-                Spacer()
-                
-                // Tags indicator (if present)
-                if !note.tagIDs.isEmpty {
-                    HStack(spacing: 4) {
-                        ForEach(0..<min(3, note.tagIDs.count), id: \.self) { _ in
-                            Circle()
-                                .fill(AppTheme.Colors.accent.opacity(0.7))
-                                .frame(width: 8, height: 8)
-                        }
-                        
-                        if note.tagIDs.count > 3 {
-                            Text("+\(note.tagIDs.count - 3)")
-                                .font(AppTheme.Typography.caption())
-                                .foregroundColor(AppTheme.Colors.textTertiary)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(AppTheme.Dimensions.spacing)
-        .background(isSelected ? AppTheme.Colors.highlightBackground : AppTheme.Colors.cardSurface)
-        .cornerRadius(AppTheme.Dimensions.radiusM)
-        .shadow(
-            color: AppTheme.Colors.cardShadow.opacity(colorScheme == .dark ? 0.3 : 0.1),
-            radius: AppTheme.Dimensions.shadowRadius,
-            x: AppTheme.Dimensions.shadowOffsetX,
-            y: AppTheme.Dimensions.shadowOffsetY
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-                .stroke(
-                    isSelected ? AppTheme.Colors.primary : Color.clear,
-                    lineWidth: isSelected ? 2 : 0
-                )
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
+        Button(action: {
             if isInSelectionMode {
                 onLongPress()
             } else {
                 onTap()
             }
-        }
-        .onLongPressGesture {
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-            onLongPress()
-        }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
-                withAnimation {
-                    onDelete()
+        }) {
+            VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
+                // Title and pin indicator
+                HStack {
+                    if isInSelectionMode {
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22))
+                            .foregroundColor(isSelected ? AppTheme.Colors.primary : AppTheme.Colors.textSecondary)
+                            .padding(.trailing, 6)
+                    }
+                    
+                    Text(note.title)
+                        .font(AppTheme.Typography.headline())
+                        .fontWeight(.medium)
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    if note.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.caption)
+                            .foregroundColor(AppTheme.Colors.primary.opacity(0.7))
+                    }
                 }
-            } label: {
-                Label("Delete", systemImage: "trash")
+                
+                // Content preview
+                if !note.content.isEmpty {
+                    Text(note.content)
+                        .font(AppTheme.Typography.body())
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                        .lineLimit(3)
+                        .padding(.bottom, 4)
+                }
+                
+                // Image preview if available
+                if let imageData = note.imageData, let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity, maxHeight: 120)
+                        .cornerRadius(AppTheme.Dimensions.radiusS)
+                        .clipped()
+                        .padding(.bottom, 4)
+                }
+                
+                // Date and metadata
+                HStack {
+                    Text(formattedDate)
+                        .font(AppTheme.Typography.caption())
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                    
+                    Spacer()
+                    
+                    // Tags indicator (if present)
+                    if !note.tagIDs.isEmpty {
+                        HStack(spacing: 4) {
+                            ForEach(0..<min(3, note.tagIDs.count), id: \.self) { index in
+                                Circle()
+                                    .fill(AppTheme.Colors.tagColors[index % AppTheme.Colors.tagColors.count])
+                                    .frame(width: 8, height: 8)
+                            }
+                            
+                            if note.tagIDs.count > 3 {
+                                Text("+\(note.tagIDs.count - 3)")
+                                    .font(AppTheme.Typography.caption())
+                                    .foregroundColor(AppTheme.Colors.textTertiary)
+                            }
+                        }
+                    }
+                }
             }
-            
-            Button {
+            .padding(AppTheme.Dimensions.spacing)
+            .background(isSelected ? AppTheme.Colors.highlightBackground : AppTheme.Colors.cardSurface)
+            .cornerRadius(AppTheme.Dimensions.radiusM)
+            .shadow(
+                color: AppTheme.Colors.cardShadow.opacity(colorScheme == .dark ? 0.3 : 0.1),
+                radius: isPressed ? 2 : AppTheme.Dimensions.shadowRadius,
+                x: AppTheme.Dimensions.shadowOffsetX,
+                y: isPressed ? 1 : AppTheme.Dimensions.shadowOffsetY
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
+                    .stroke(
+                        isSelected ? AppTheme.Colors.primary : Color.clear,
+                        lineWidth: isSelected ? 2 : 0
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
+        .contextMenu {
+            Button(action: {
                 let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
                 impactGenerator.impactOccurred()
-                
-                // Post notification to trigger pin toggle in parent view
                 NotificationCenter.default.post(
                     name: NSNotification.Name("ToggleNotePin"),
                     object: note.id
                 )
-            } label: {
+            }) {
                 Label(note.isPinned ? "Unpin" : "Pin", systemImage: note.isPinned ? "pin.slash" : "pin")
             }
-            .tint(AppTheme.Colors.primary)
-        }
-        .swipeActions(edge: .leading) {
-            Button {
-                let impactGenerator = UIImpactFeedbackGenerator(style: .medium)
-                impactGenerator.impactOccurred()
-                
-                // Post notification for sharing
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("ShareNote"),
-                    object: note.id
-                )
-            } label: {
-                Label("Share", systemImage: "square.and.arrow.up")
+            
+            Button(role: .destructive, action: {
+                let generator = UINotificationFeedbackGenerator()
+                generator.notificationOccurred(.warning)
+                onDelete()
+            }) {
+                Label("Delete", systemImage: "trash")
             }
-            .tint(AppTheme.Colors.accent)
         }
         .animation(AppTheme.Animations.standardCurve, value: isSelected)
-        .listItemTransition()
     }
     
     private var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        formatter.timeStyle = .none
         return formatter.string(from: note.date)
     }
 }
@@ -163,7 +152,6 @@ struct NoteCardView_Previews: PreviewProvider {
                     isPinned: true,
                     date: Date(),
                     imageData: nil,
-                    attributedContent: nil,
                     tagIDs: []
                 ),
                 onTap: {},
@@ -185,7 +173,6 @@ struct NoteCardView_Previews: PreviewProvider {
                     isPinned: false,
                     date: Date(),
                     imageData: nil,
-                    attributedContent: nil,
                     tagIDs: [UUID(), UUID()]
                 ),
                 onTap: {},

@@ -109,6 +109,15 @@ struct ChecklistListView: View {
                     }
                 }
                 
+                // Add observer for share action from swipe actions
+                NotificationCenter.default.addObserver(forName: NSNotification.Name("ShareChecklist"), object: nil, queue: .main) { notification in
+                    if let checklistID = notification.object as? UUID,
+                       let checklist = checklistStore.checklists.first(where: { $0.id == checklistID }) {
+                        // Share the checklist
+                        shareChecklist(checklist)
+                    }
+                }
+                
                 // Add observer for complete all items from swipe actions
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("CompleteAllChecklistItems"), object: nil, queue: .main) { notification in
                     if let checklistID = notification.object as? UUID,
@@ -130,6 +139,7 @@ struct ChecklistListView: View {
             .onDisappear {
                 // Remove observers when view disappears
                 NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ToggleChecklistPin"), object: nil)
+                NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ShareChecklist"), object: nil)
                 NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CompleteAllChecklistItems"), object: nil)
             }
     }
@@ -376,31 +386,6 @@ struct ChecklistListView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                // Add haptic feedback for destructive action
-                let generator = UINotificationFeedbackGenerator()
-                generator.notificationOccurred(.warning)
-                
-                // Delete the checklist
-                checklistStore.delete(checklist: checklist)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-            .tint(.red)
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                checklistStore.togglePin(checklist: checklist)
-                
-                // Add haptic feedback
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
-            } label: {
-                Label(checklist.isPinned ? "Unpin" : "Pin", systemImage: checklist.isPinned ? "pin.slash" : "pin")
-            }
-            .tint(.blue)
-        }
     }
     
     // MARK: - Helper Functions
@@ -439,7 +424,7 @@ struct ChecklistListView: View {
     private func deleteSelectedChecklists() {
         // Add haptic feedback for destructive action
         let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
+        generator.notificationOccurred(.warning)
         
         // Get checklists to delete
         let checklistsToDelete = checklistStore.checklists.filter { selectedChecklists.contains($0.id) }
@@ -454,8 +439,31 @@ struct ChecklistListView: View {
         
         // Clear selection and exit selection mode
         selectedChecklists.removeAll()
-        withAnimation(AppTheme.Animations.standardCurve) {
-            isSelectionMode = false
+        isSelectionMode = false
+    }
+    
+    private func shareChecklist(_ checklist: ChecklistNote) {
+        // Create text to share
+        var shareText = "\(checklist.title)\n\n"
+        
+        // Add checklist items
+        for (index, item) in checklist.items.enumerated() {
+            let checkmark = item.isDone ? "✓" : "□"
+            shareText += "\(checkmark) \(item.text)\n"
+        }
+        
+        shareText += "\nShared from MyNotes app"
+        
+        // Create activity view controller
+        let activityViewController = UIActivityViewController(
+            activityItems: [shareText],
+            applicationActivities: nil
+        )
+        
+        // Present the activity view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            rootViewController.present(activityViewController, animated: true)
         }
     }
     

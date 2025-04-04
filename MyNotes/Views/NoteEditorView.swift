@@ -83,6 +83,14 @@ struct NoteEditorView: View {
                     .frame(maxWidth: .infinity)
                     .padding(AppTheme.Dimensions.spacing)
                     .background(AppTheme.Colors.focusBackground)
+                    .cornerRadius(AppTheme.Dimensions.radiusL)
+                    .shadow(
+                        color: AppTheme.Colors.cardShadow.opacity(0.2),
+                        radius: 8,
+                        x: 0,
+                        y: 4
+                    )
+                    .padding(.horizontal, AppTheme.Dimensions.spacingL)
                     
                     Spacer()
                     
@@ -91,11 +99,11 @@ struct NoteEditorView: View {
                             isFocusMode = false
                         }
                     }
-                    .minimalButtonStyle()
+                    .buttonStyle(FilledButtonStyle())
                     .padding(.bottom)
                 }
-                .background(Color.black.opacity(0.02))
-                .transition(.opacity)
+                .background(Color.black.opacity(0.05))
+                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -171,11 +179,22 @@ struct NoteEditorView: View {
                                 }
                             )
                             .frame(minHeight: 200)
-                            .padding(.horizontal, AppTheme.Dimensions.spacing)
+                            .padding(.horizontal, AppTheme.Dimensions.spacingXS)
+                            .padding(.vertical, AppTheme.Dimensions.spacingXS)
+                            .background(AppTheme.Colors.secondaryBackground)
+                            .cornerRadius(AppTheme.Dimensions.radiusM)
+                            .shadow(
+                                color: AppTheme.Colors.cardShadow.opacity(0.1),
+                                radius: 2,
+                                x: 0,
+                                y: 1
+                            )
                         } else {
                             TextField("Note content", text: $content)
                                 .font(AppTheme.Typography.body())
-                                .padding(.horizontal, AppTheme.Dimensions.spacing)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
                         }
                         
                         HStack {
@@ -340,25 +359,33 @@ struct NoteEditorView: View {
             documentAttributes: [.documentType: NSAttributedString.DocumentType.rtfd]
         )
         
+        // Validate input - ensure title is not empty
+        let finalTitle = title.isEmpty ? "Untitled Note" : title
+        
+        // Print debug info
+        print("NoteEditorView: Saving note with title '\(finalTitle)' and mode \(mode)")
+        
         if mode == .new {
             noteStore.addNote(
-                title: title,
+                title: finalTitle,
                 content: content,
                 folderID: selectedFolderID,
                 imageData: imageData,
                 attributedContent: attributedContentData,
                 tagIDs: tagIDs
             )
+            print("NoteEditorView: Added new note with title '\(finalTitle)'")
         } else if let note = existingNote {
             noteStore.update(
                 note: note,
-                title: title,
+                title: finalTitle,
                 content: content,
                 folderID: selectedFolderID,
                 imageData: imageData,
                 attributedContent: attributedContentData,
                 tagIDs: tagIDs
             )
+            print("NoteEditorView: Updated existing note with title '\(finalTitle)'")
         }
     }
 }

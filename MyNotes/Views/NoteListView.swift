@@ -152,45 +152,83 @@ struct NoteListView: View {
                 if filteredNotes.isEmpty {
                     emptyStateView
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            // Pinned notes
-                            if !pinnedNotes.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Pinned")
-                                        .font(AppTheme.Typography.headline())
-                                        .foregroundColor(AppTheme.Colors.textSecondary)
-                                        .padding(.horizontal, 16)
-                                        .padding(.top, 16)
-                                    
-                                    ForEach(pinnedNotes) { note in
-                                        noteCardView(for: note)
-                                            .padding(.horizontal, 16)
-                                    }
+                    List {
+                        // Pinned notes
+                        if !pinnedNotes.isEmpty {
+                            Section(header: Text("Pinned")) {
+                                ForEach(pinnedNotes) { note in
+                                    noteCardView(for: note)
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                        .listRowBackground(Color.clear)
+                                        .swipeActions(edge: .trailing) {
+                                            Button(role: .destructive) {
+                                                let generator = UINotificationFeedbackGenerator()
+                                                generator.notificationOccurred(.warning)
+                                                noteStore.delete(note: note)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                            .tint(.red)
+                                            
+                                            if note.isPinned {
+                                                Button {
+                                                    noteStore.togglePin(note: note)
+                                                } label: {
+                                                    Label("Unpin", systemImage: "pin.slash")
+                                                }
+                                                .tint(.blue)
+                                            } else {
+                                                Button {
+                                                    noteStore.togglePin(note: note)
+                                                } label: {
+                                                    Label("Pin", systemImage: "pin")
+                                                }
+                                                .tint(.blue)
+                                            }
+                                        }
                                 }
                             }
-                            
-                            // Unpinned notes
-                            if !unpinnedNotes.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    if !pinnedNotes.isEmpty {
-                                        Text("Notes")
-                                            .font(AppTheme.Typography.headline())
-                                            .foregroundColor(AppTheme.Colors.textSecondary)
-                                            .padding(.horizontal, 16)
-                                            .padding(.top, 16)
-                                    }
-                                    
-                                    ForEach(unpinnedNotes) { note in
-                                        noteCardView(for: note)
-                                            .padding(.horizontal, 16)
-                                    }
+                        }
+                        
+                        // Unpinned notes
+                        if !unpinnedNotes.isEmpty {
+                            Section(header: pinnedNotes.isEmpty ? Text("") : Text("Notes")) {
+                                ForEach(unpinnedNotes) { note in
+                                    noteCardView(for: note)
+                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                        .listRowBackground(Color.clear)
+                                        .swipeActions(edge: .trailing) {
+                                            Button(role: .destructive) {
+                                                let generator = UINotificationFeedbackGenerator()
+                                                generator.notificationOccurred(.warning)
+                                                noteStore.delete(note: note)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+                                            .tint(.red)
+                                            
+                                            if note.isPinned {
+                                                Button {
+                                                    noteStore.togglePin(note: note)
+                                                } label: {
+                                                    Label("Unpin", systemImage: "pin.slash")
+                                                }
+                                                .tint(.blue)
+                                            } else {
+                                                Button {
+                                                    noteStore.togglePin(note: note)
+                                                } label: {
+                                                    Label("Pin", systemImage: "pin")
+                                                }
+                                                .tint(.blue)
+                                            }
+                                        }
                                 }
                             }
-                            
-                            Spacer(minLength: 80)
                         }
                     }
+                    .listStyle(PlainListStyle())
+                    .background(Color.clear)
                 }
             }
         }
@@ -340,25 +378,6 @@ struct NoteListView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    // Only allow swipe gestures when not in selection mode
-                    if !isSelectionMode {
-                        if value.translation.width < -50 {
-                            // Swiped left - delete
-                            let generator = UINotificationFeedbackGenerator()
-                            generator.notificationOccurred(.warning)
-                            noteStore.delete(note: note)
-                        } else if value.translation.width > 50 {
-                            // Swiped right - toggle pin
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            noteStore.togglePin(note: note)
-                        }
-                    }
-                }
-        )
     }
     
     private var trailingToolbarContent: some View {
