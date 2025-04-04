@@ -102,7 +102,7 @@ struct NoteListView: View {
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("ToggleNotePin"), object: nil, queue: .main) { notification in
                     if let noteID = notification.object as? UUID,
                        let note = noteStore.notes.first(where: { $0.id == noteID }) {
-                        noteStore.togglePin(note: note)
+                        togglePin(note)
                     }
                 }
                 
@@ -286,7 +286,7 @@ struct NoteListView: View {
                 selectedNote = note
             },
             onDelete: {
-                noteStore.delete(note: note)
+                deleteNote(note)
             },
             onLongPress: {
                 if isSelectionMode {
@@ -378,6 +378,16 @@ struct NoteListView: View {
         } else {
             selectedNotes.insert(note.id)
         }
+    }
+    
+    private func togglePin(_ note: Note) {
+        // Use the togglePin method from NoteStore
+        noteStore.togglePin(note: note)
+    }
+    
+    private func deleteNote(_ note: Note) {
+        // Use the delete method from NoteStore
+        noteStore.delete(note: note)
     }
     
     private func deleteSelectedNotes() {

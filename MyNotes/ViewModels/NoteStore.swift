@@ -2,13 +2,29 @@ import Foundation
 import CoreData
 import Combine
 
-class NoteStore: ObservableObject {
+final class NoteStore: ObservableObject {
     @Published var notes: [Note] = []
+    @Published var isLoading = false
+    @Published var loadingError: Error? = nil
     
-    private let persistence = PersistenceController.shared
+    private let repository: any NoteRepository
+    private let cache: NoteCache
+    private let errorHandler: ErrorHandler
+    private let operationRunner: CoreDataOperationRunner
+    private let backgroundTaskManager: BackgroundTaskManager
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    init(repository: any NoteRepository = CoreDataNoteRepository(),
+         cache: NoteCache = ThreadSafeNoteCache(cache: UserDefaultsNoteCache()),
+         errorHandler: ErrorHandler = AppErrorHandler.shared,
+         operationRunner: CoreDataOperationRunner = CoreDataOperationRunner(),
+         backgroundTaskManager: BackgroundTaskManager = BackgroundTaskManager.shared) {
+        self.repository = repository
+        self.cache = cache
+        self.errorHandler = errorHandler
+        self.operationRunner = operationRunner
+        self.backgroundTaskManager = backgroundTaskManager
+        
         print("NoteStore: Initializing")
         loadNotes()
         setupObservers()
@@ -29,20 +45,52 @@ class NoteStore: ObservableObject {
     }
     
     func loadNotes() {
-        print("NoteStore: Loading notes from Core Data")
-        let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \CDNote.date, ascending: false)]
+        isLoading = true
+        loadingError = nil
         
-        do {
-            let cdNotes = try persistence.container.viewContext.fetch(request)
-            self.notes = cdNotes.map { $0.toDomainModel() }
-            print("NoteStore: Successfully loaded \(self.notes.count) notes")
-        } catch {
-            print("NoteStore: Error fetching notes: \(error)")
-        }
+        print("NoteStore: Loading notes from Core Data")
+        let operation = FetchNotesOperation()
+        
+        operationRunner.runInBackground(
+            operation: operation,
+            description: "Loading all notes",
+            category: "Notes"
+        )
+        .receive(on: DispatchQueue.main)
+        .sink(
+            receiveCompletion: { [weak self] completion in
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                if case .failure(let error) = completion {
+                    self.loadingError = error
+                    Task {
+                        await self.errorHandler.handle(
+                            error,
+                            from: "NoteStore.loadNotes",
+                            retryAction: { [weak self] in
+                                self?.loadNotes()
+                            }
+                        )
+                    }
+                }
+            },
+            receiveValue: { [weak self] notes in
+                guard let self = self else { return }
+                self.notes = notes
+                print("NoteStore: Successfully loaded \(self.notes.count) notes")
+                
+                // Cache all notes in the background
+                Task {
+                    for note in notes {
+                        self.cache.cache(note)
+                    }
+                }
+            }
+        )
+        .store(in: &cancellables)
     }
     
-    // Ensure we have test data for debugging
     func ensureTestData() {
         if notes.isEmpty {
             print("NoteStore: Adding test data as notes array is empty")
@@ -79,8 +127,7 @@ class NoteStore: ObservableObject {
         }
     }
     
-    func addNote(title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
-        let context = persistence.container.viewContext
+    func addNote(title: String, content: String, folderID: UUID? = nil, imageData: Data? = nil, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
         let newNote = Note(
             id: UUID(), 
             title: title, 
@@ -94,14 +141,237 @@ class NoteStore: ObservableObject {
             priority: priority
         )
         
-        _ = CDNote.fromDomainModel(newNote, in: context)
-        
-        saveContext()
-        loadNotes()
+        do {
+            try repository.create(newNote)
+            cache.cache(newNote)
+            loadNotes()
+        } catch {
+            Task {
+                await errorHandler.handle(
+                    error,
+                    from: "NoteStore.addNote",
+                    retryAction: { [weak self] in
+                        guard let self = self else { return }
+                        self.addNote(
+                            title: title,
+                            content: content,
+                            folderID: folderID,
+                            imageData: imageData,
+                            attributedContent: attributedContent,
+                            tagIDs: tagIDs,
+                            priority: priority
+                        )
+                    }
+                )
+            }
+        }
     }
     
+    func saveNote(_ note: Note) {
+        do {
+            try repository.update(note)
+            cache.cache(note)
+            loadNotes()
+        } catch {
+            Task {
+                await errorHandler.handle(
+                    error,
+                    from: "NoteStore.saveNote",
+                    retryAction: { [weak self] in
+                        self?.saveNote(note)
+                    }
+                )
+            }
+        }
+    }
+    
+    func delete(note: Note) {
+        do {
+            try repository.delete(note)
+            cache.remove(note.id)
+            loadNotes()
+        } catch {
+            Task {
+                await errorHandler.handle(
+                    error,
+                    from: "NoteStore.delete",
+                    retryAction: { [weak self] in
+                        self?.delete(note: note)
+                    }
+                )
+            }
+        }
+    }
+    
+    func batchDeleteNotes(_ notes: [Note]) -> Void {
+        // Use background task for better performance with large deletions
+        let operation = BatchDeleteNotesOperation(noteIDs: notes.map { $0.id })
+        
+        backgroundTaskManager.submitTask(
+            name: "Delete Notes",
+            description: "Deleting \(notes.count) notes",
+            category: "Notes"
+        ) { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let count = try self.operationRunner.runInForeground(operation: operation)
+                print("NoteStore: Successfully deleted \(count) notes")
+                
+                // Clean up cache
+                for note in notes {
+                    self.cache.remove(note.id)
+                }
+                
+                // Reload notes
+                DispatchQueue.main.async {
+                    self.loadNotes()
+                }
+            } catch {
+                Task {
+                    await self.errorHandler.handle(
+                        error,
+                        from: "NoteStore.batchDeleteNotes",
+                        retryAction: { [weak self] in
+                            guard let self = self else { return }
+                            self.batchDeleteNotes(notes)
+                        }
+                    )
+                }
+                throw error
+            }
+        }
+    }
+    
+    func importNotes(_ notes: [Note]) -> Void {
+        let operation = ImportNotesOperation(notes: notes)
+        
+        backgroundTaskManager.submitTask(
+            name: "Import Notes",
+            description: "Importing \(notes.count) notes",
+            category: "Notes"
+        ) { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let count = try self.operationRunner.runInForeground(operation: operation)
+                print("NoteStore: Successfully imported \(count) notes")
+                
+                // Cache imported notes
+                for note in notes {
+                    self.cache.cache(note)
+                }
+                
+                // Reload notes
+                DispatchQueue.main.async {
+                    self.loadNotes()
+                }
+            } catch {
+                Task {
+                    await self.errorHandler.handle(
+                        error,
+                        from: "NoteStore.importNotes",
+                        retryAction: { [weak self] in
+                            guard let self = self else { return }
+                            self.importNotes(notes)
+                        }
+                    )
+                }
+                throw error
+            }
+        }
+    }
+    
+    func createBackup() -> Void {
+        backgroundTaskManager.submitTask(
+            name: "Create Backup",
+            description: "Creating backup of all notes",
+            category: "Backup"
+        ) { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let backupService = FileSystemBackupService()
+                let backupURL = try await backupService.createBackup()
+                print("NoteStore: Backup created at \(backupURL.path)")
+            } catch {
+                Task {
+                    await self.errorHandler.handle(
+                        error,
+                        from: "NoteStore.createBackup",
+                        retryAction: { [weak self] in
+                            self?.createBackup()
+                        }
+                    )
+                }
+                throw error
+            }
+        }
+    }
+    
+    func restoreFromBackup(at url: URL) -> Void {
+        backgroundTaskManager.submitTask(
+            name: "Restore Backup",
+            description: "Restoring from backup",
+            category: "Backup"
+        ) { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let backupService = FileSystemBackupService()
+                try await backupService.restoreFromBackup(at: url)
+                
+                // Clear cache after restore
+                self.cache.clear()
+                
+                // Reload notes
+                DispatchQueue.main.async {
+                    self.loadNotes()
+                }
+            } catch {
+                Task {
+                    await self.errorHandler.handle(
+                        error,
+                        from: "NoteStore.restoreFromBackup",
+                        retryAction: { [weak self] in
+                            guard let self = self else { return }
+                            self.restoreFromBackup(at: url)
+                        }
+                    )
+                }
+                throw error
+            }
+        }
+    }
+    
+    func getNote(id: UUID) -> Note? {
+        // Try to get from cache first
+        if let cachedNote = cache.get(id) {
+            return cachedNote
+        }
+        
+        // If not in cache, fetch from repository
+        do {
+            let notes = try repository.fetch(byIDs: [id])
+            if let note = notes.first {
+                cache.cache(note)
+                return note
+            }
+            return nil
+        } catch {
+            Task {
+                await errorHandler.handle(
+                    error,
+                    from: "NoteStore.getNote",
+                    retryAction: nil
+                )
+            }
+            return nil
+        }
+    }
+    
+    // For backward compatibility with views
     func update(note: Note, title: String, content: String, folderID: UUID?, imageData: Data?, attributedContent: Data? = nil, tagIDs: [UUID] = [], priority: Priority = .none) {
-        let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.title = title
         updatedNote.content = content
@@ -112,72 +382,18 @@ class NoteStore: ObservableObject {
         updatedNote.tagIDs = tagIDs
         updatedNote.priority = priority
         
-        _ = CDNote.fromDomainModel(updatedNote, in: context)
-        
-        saveContext()
-        loadNotes()
+        saveNote(updatedNote)
     }
     
-    func delete(note: Note) {
-        print("NoteStore: Deleting note with ID: \(note.id)")
-        let context = persistence.container.viewContext
-        let request: NSFetchRequest<CDNote> = CDNote.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
-        
-        do {
-            if let noteToDelete = try context.fetch(request).first {
-                // Use the enhanced safeDelete method from PersistenceController
-                persistence.safeDelete(object: noteToDelete)
-                print("NoteStore: Successfully deleted note")
-            } else {
-                print("NoteStore: Note not found for deletion")
-            }
-        } catch {
-            print("NoteStore: Error fetching note for deletion: \(error.localizedDescription)")
-            
-            // Attempt to recover by using batch delete as fallback
-            let predicate = NSPredicate(format: "id == %@", note.id as CVarArg)
-            persistence.batchDelete(entityType: CDNote.self, predicate: predicate)
-        }
-        
-        loadNotes()
-    }
-    
-    func deleteMultiple(notes: [Note]) {
-        print("NoteStore: Batch deleting \(notes.count) notes")
-        
-        if notes.isEmpty { return }
-        
-        // Use batch delete for efficiency
-        let noteIDs = notes.map { $0.id }
-        let predicate = NSPredicate(format: "id IN %@", noteIDs as [CVarArg])
-        
-        persistence.batchDelete(entityType: CDNote.self, predicate: predicate)
-        loadNotes()
-    }
-    
+    // For backward compatibility with views
     func togglePin(note: Note) {
-        let context = persistence.container.viewContext
         var updatedNote = note
         updatedNote.isPinned.toggle()
-        
-        _ = CDNote.fromDomainModel(updatedNote, in: context)
-        
-        saveContext()
-        loadNotes()
+        saveNote(updatedNote)
     }
     
-    func getNote(id: UUID) -> Note? {
-        return notes.first { $0.id == id }
-    }
-    
-    private func saveContext() {
-        persistence.save()
-    }
-    
-    private func saveNote(_ note: Note) {
-        let context = persistence.container.viewContext
-        _ = CDNote.fromDomainModel(note, in: context)
-        saveContext()
+    // For backward compatibility with views
+    func deleteMultiple(notes: [Note]) {
+        batchDeleteNotes(notes)
     }
 }

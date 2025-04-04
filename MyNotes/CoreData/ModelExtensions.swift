@@ -51,7 +51,7 @@ extension CDNote {
             // Handle folder relationship if needed
             if let folderID = note.folderID {
                 let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-                folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+                folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
                 if let folder = try context.fetch(folderRequest).first {
                     cdNote.folder = folder
                 }
@@ -69,8 +69,9 @@ extension CDNote {
             // Then add the current tags
             if !note.tagIDs.isEmpty {
                 let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-                // Use IN predicate with UUID objects directly
-                tagRequest.predicate = NSPredicate(format: "id IN %@", note.tagIDs as [Any])
+                // Convert UUIDs to strings before using in predicate
+                let tagIDStrings = note.tagIDs.map { $0.uuidString }
+                tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
                 
                 let tags = try? context.fetch(tagRequest)
                 for tag in tags ?? [] {
@@ -186,7 +187,7 @@ extension CDChecklistNote {
             // Handle folder relationship if needed
             if let folderID = checklist.folderID {
                 let folderRequest: NSFetchRequest<CDFolder> = CDFolder.fetchRequest()
-                folderRequest.predicate = NSPredicate(format: "id == %@", folderID as CVarArg)
+                folderRequest.predicate = NSPredicate(format: "id == %@", folderID.uuidString)
                 if let folder = try context.fetch(folderRequest).first {
                     cdChecklist.folder = folder
                 }
@@ -210,8 +211,9 @@ extension CDChecklistNote {
             // Then add the current tags
             if !checklist.tagIDs.isEmpty {
                 let tagRequest: NSFetchRequest<CDTag> = CDTag.fetchRequest()
-                // Use IN predicate with UUID objects directly
-                tagRequest.predicate = NSPredicate(format: "id IN %@", checklist.tagIDs as [Any])
+                // Convert UUIDs to strings before using in predicate
+                let tagIDStrings = checklist.tagIDs.map { $0.uuidString }
+                tagRequest.predicate = NSPredicate(format: "id IN %@", tagIDStrings)
                 
                 let tags = try? context.fetch(tagRequest)
                 for tag in tags ?? [] {
