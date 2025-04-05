@@ -74,6 +74,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Version History
 
+### v0.3.7 (2025-04-04)
+- Fixed build errors in RichTextEditor.swift:
+  - Resolved conditional binding issues with non-optional types
+  - Fixed UIFont initialization and proper descriptor handling
+  - Updated deprecated UIApplication.shared.windows API to use modern scene-based approach
+  - Improved error handling in text formatting operations
+  - Enhanced code structure for better maintainability
+
 ### v0.3.2 (2025-04-01)
 - Fixed UI inconsistencies and critical functionality:
   - Enhanced dark mode support with dynamic colors
