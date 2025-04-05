@@ -32,6 +32,8 @@ struct NoteEditorView: View {
     @State private var showDeleteConfirmation = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var imageData: Data?
+    @State private var showFormatOptions = false
+    @State private var showImagePicker = false
     @FocusState private var isEditorFocused: Bool
     @FocusState private var isTitleFocused: Bool
     
@@ -122,15 +124,109 @@ struct NoteEditorView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            
+            // Formatting and image buttons at the bottom right
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    
+                    // Format button with popover
+                    Button(action: {
+                        showFormatOptions.toggle()
+                    }) {
+                        Image(systemName: "textformat")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Color(.systemGray6)))
+                    }
+                    .popover(isPresented: $showFormatOptions, arrowEdge: .bottom) {
+                        FormatOptionsView(content: $content)
+                            .frame(width: 300, height: 200)
+                            .padding()
+                    }
+                    .padding(.trailing, 8)
+                    
+                    // Image picker button
+                    PhotosPicker(selection: $selectedItem, matching: .images) {
+                        Image(systemName: "photo")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppTheme.Colors.textPrimary)
+                            .frame(width: 44, height: 44)
+                            .background(Circle().fill(Color(.systemGray6)))
+                    }
+                    .onChange(of: selectedItem) { _, newItem in
+                        Task {
+                            if let data = try? await newItem?.loadTransferable(type: Data.self) {
+                                imageData = data
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            
+            // Show image if selected
+            if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                VStack {
+                    Spacer()
+                    
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: uiImage)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 200)
+                            .cornerRadius(8)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemBackground))
+                                    .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                            )
+                            .padding()
+                        
+                        Button(action: {
+                            withAnimation {
+                                self.imageData = nil
+                                self.selectedItem = nil
+                            }
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.white)
+                                .background(Circle().fill(Color.black.opacity(0.6)))
+                        }
+                        .padding(24)
+                    }
+                    
+                    Spacer()
+                }
+                .background(Color.black.opacity(0.5))
+                .edgesIgnoringSafeArea(.all)
+                .transition(.opacity)
+                .zIndex(10)
+            }
         }
+        .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
                     environmentDismiss()
                 }) {
-                    Image(systemName: "chevron.left")
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                    .foregroundColor(AppTheme.Colors.accent)
                 }
+            }
+            
+            ToolbarItem(placement: .principal) {
+                Text(mode == .new ? "New Note" : "Edit Note")
+                    .font(.headline)
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -139,6 +235,8 @@ struct NoteEditorView: View {
                     environmentDismiss()
                 }) {
                     Text("Done")
+                        .foregroundColor(AppTheme.Colors.accent)
+                        .fontWeight(.medium)
                 }
             }
         }
@@ -204,5 +302,62 @@ struct NoteEditorView: View {
         if let note = existingNote {
             noteStore.delete(note: note)
         }
+    }
+}
+
+// MARK: - Format Options View
+struct FormatOptionsView: View {
+    @Binding var content: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Text Formatting")
+                .font(.headline)
+                .padding(.top, 8)
+            
+            HStack(spacing: 20) {
+                FormatOptionButton(title: "Bold", icon: "bold", action: { applyBold() })
+                FormatOptionButton(title: "Italic", icon: "italic", action: { applyItalic() })
+                FormatOptionButton(title: "Underline", icon: "underline", action: { applyUnderline() })
+            }
+            
+            HStack(spacing: 20) {
+                FormatOptionButton(title: "Heading", icon: "text.heading", action: { applyHeading() })
+                FormatOptionButton(title: "List", icon: "list.bullet", action: { applyList() })
+                FormatOptionButton(title: "Quote", icon: "text.quote", action: { applyQuote() })
+            }
+            
+            Spacer()
+        }
+        .padding()
+    }
+    
+    // These are placeholder functions - in a real app, you'd implement proper formatting
+    private func applyBold() {}
+    private func applyItalic() {}
+    private func applyUnderline() {}
+    private func applyHeading() {}
+    private func applyList() {}
+    private func applyQuote() {}
+}
+
+struct FormatOptionButton: View {
+    let title: String
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack {
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .padding(10)
+                    .background(Circle().fill(Color(.systemGray5)))
+                
+                Text(title)
+                    .font(.caption)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
