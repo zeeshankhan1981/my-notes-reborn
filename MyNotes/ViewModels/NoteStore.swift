@@ -163,6 +163,7 @@ class NoteStore: ObservableObject {
         loadNotes()
     }
     
+    
     func getNote(id: UUID) -> Note? {
         return notes.first { $0.id == id }
     }

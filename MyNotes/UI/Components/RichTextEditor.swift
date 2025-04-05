@@ -5,63 +5,7 @@ struct RichTextEditor: UIViewRepresentable {
     @Binding var text: NSAttributedString
     var placeholder: String
     var onTextChange: (NSAttributedString) -> Void
-    @Binding var activeFormatting: Set<TextFormatting> // Add tracking for active formatting
-    
-    // Add the TextFormatting enum that NoteEditorView expects
-    enum TextFormatting: Hashable {
-        case bold
-        case italic
-        case underline
-        case alignLeft
-        case alignCenter
-        case alignRight
-        case bulletList
-        case numberedList
-        case fontSize(CGFloat)
-        case textColor(UIColor)
-        case insertLink(URL, String)
-        
-        // Add Hashable conformance for fontSize and textColor cases
-        func hash(into hasher: inout Hasher) {
-            switch self {
-            case .bold: hasher.combine(0)
-            case .italic: hasher.combine(1)
-            case .underline: hasher.combine(2)
-            case .alignLeft: hasher.combine(3)
-            case .alignCenter: hasher.combine(4)
-            case .alignRight: hasher.combine(5)
-            case .bulletList: hasher.combine(6)
-            case .numberedList: hasher.combine(7)
-            case .fontSize(let size): 
-                hasher.combine(8)
-                hasher.combine(size)
-            case .textColor(let color): 
-                hasher.combine(9)
-                hasher.combine(color.hashValue)
-            case .insertLink(let url, let text):
-                hasher.combine(10)
-                hasher.combine(url.hashValue)
-                hasher.combine(text)
-            }
-        }
-        
-        static func == (lhs: TextFormatting, rhs: TextFormatting) -> Bool {
-            switch (lhs, rhs) {
-            case (.bold, .bold), (.italic, .italic), (.underline, .underline),
-                 (.alignLeft, .alignLeft), (.alignCenter, .alignCenter), (.alignRight, .alignRight),
-                 (.bulletList, .bulletList), (.numberedList, .numberedList):
-                return true
-            case (.fontSize(let size1), .fontSize(let size2)):
-                return size1 == size2
-            case (.textColor(let color1), .textColor(let color2)):
-                return color1 == color2
-            case (.insertLink(let url1, let text1), .insertLink(let url2, let text2)):
-                return url1 == url2 && text1 == text2
-            default:
-                return false
-            }
-        }
-    }
+    @Binding var activeFormatting: Set<TextFormatting> // Use the shared TextFormatting enum
     
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -633,7 +577,7 @@ struct RichTextEditor: UIViewRepresentable {
         // MARK: - Formatting Handler
         
         @objc func handleFormatting(_ notification: Notification) {
-            guard let formatting = notification.object as? RichTextEditor.TextFormatting else { return }
+            guard let formatting = notification.object as? TextFormatting else { return }
             
             switch formatting {
             case .bold:

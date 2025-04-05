@@ -20,10 +20,14 @@ struct ChecklistEditorView: View {
     @State private var newItem = ""
     @State private var selectedFolderID: UUID?
     @State private var tagIDs: [UUID] = []
-    @State private var animateList = false
+    @State private var animateItems = false
+    @State private var isShowingDeleteConfirmation = false
+    
+    // Animation and UI state
+    @State private var animateIn = false
     @State private var focusedField: UUID?
     @FocusState private var isAddingNewItem: Bool
-    @State private var isShowingDeleteConfirmation = false
+    @FocusState private var isTitleFocused: Bool
 
     // Original initializer for backward compatibility
     init(mode: ChecklistEditorMode, existingChecklist: ChecklistNote?) {
@@ -68,9 +72,52 @@ struct ChecklistEditorView: View {
                 .ignoresSafeArea()
             
             // Main content
-            mainContentView
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Title section
+                        titleSection
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 20)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: animateIn)
+                        
+                        // Items section
+                        itemsSection
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 30)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.05), value: animateIn)
+                        
+                        // Tags section
+                        tagsSection
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 40)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.1), value: animateIn)
+                        
+                        // Folder section
+                        folderSection
+                            .opacity(animateIn ? 1 : 0)
+                            .offset(y: animateIn ? 0 : 50)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.15), value: animateIn)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 24)
+                }
+                .onChange(of: focusedField) { oldValue, newValue in
+                    if let id = newValue {
+                        withAnimation {
+                            scrollProxy.scrollTo(id, anchor: .center)
+                        }
+                    }
+                }
+            }
         }
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(mode == .new ? "New Checklist" : "Edit Checklist")
+                    .font(AppTheme.Typography.headline().bold())
+            }
+            
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 16) {
                     // Only show delete button in edit mode
@@ -79,27 +126,50 @@ struct ChecklistEditorView: View {
                             isShowingDeleteConfirmation = true
                         } label: {
                             Image(systemName: "trash")
-                                .foregroundColor(Color.red)
+                                .foregroundColor(AppTheme.Colors.danger)
                         }
+                        .buttonStyle(PressableButtonStyle())
                         .accessibilityLabel("Delete Checklist")
                     }
                     
-                    SaveButton {
-                        saveChecklist()
-                    }
+                    SaveButton(
+                        action: saveChecklistWithAnimation,
+                        isDisabled: title.isEmpty && items.isEmpty
+                    )
                 }
             }
             
             ToolbarItem(placement: .navigationBarLeading) {
-                CancelButton {
-                    dismiss()
+                Button("Cancel") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        dismiss()
+                    }
                 }
+                .foregroundColor(AppTheme.Colors.accent)
             }
         }
         .navigationBarBackButtonHidden(true)
-        .navigationTitle(mode == .new ? "New Checklist" : "Edit Checklist")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: startAnimations)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    animateIn = true
+                }
+                
+                // Start item animations after a short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                        animateItems = true
+                    }
+                }
+                
+                // Auto-focus the title field for new checklists
+                if mode == .new {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        isTitleFocused = true
+                    }
+                }
+            }
+        }
         .confirmationDialog("Are you sure you want to delete this checklist?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let checklist = existingChecklist {
@@ -116,478 +186,339 @@ struct ChecklistEditorView: View {
         }
     }
     
-    private func startAnimations() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation {
-                animateList = true
-            }
-        }
-    }
+    // MARK: - UI Components
     
-    // MARK: - Main Content Components
-    
-    private var mainContentView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingL) {
-                // Title field
-                FormFieldView(label: "Title", iconName: "textformat") {
-                    TextField("Checklist title", text: $title)
-                        .font(AppTheme.Typography.title3())
-                }
-                
-                // Checklist items
-                FormFieldView(label: "Items", iconName: "checklist") {
-                    VStack(spacing: AppTheme.Dimensions.spacingS) {
-                        // Existing items
-                        if items.isEmpty {
-                            emptyItemsPlaceholder
-                                .padding(.vertical, 8)
-                        } else {
-                            ForEach(items.indices, id: \.self) { index in
-                                ChecklistItemRow(
-                                    item: binding(for: items[index]),
-                                    focusedField: $focusedField,
-                                    onDelete: { deleteItem(item: items[index]) }
-                                )
-                                .padding(.vertical, 2)
-                                .transition(.opacity)
-                            }
-                        }
-                        
-                        // Add new item section
-                        addNewItemSection
-                            .padding(.top, 8)
-                    }
-                }
-                
-                // Folder selection
-                FormFieldView(label: "Folder", iconName: "folder") {
-                    folderSelector
-                }
-                
-                // Tag selection
-                FormFieldView(label: "Tags", iconName: "tag") {
-                    TagFilterView(selectedTagIds: Binding(
-                        get: { Set(tagIDs) },
-                        set: { tagIDs = Array($0) }
-                    ))
-                    .padding(4)
-                }
-            }
-            .padding(.vertical, AppTheme.Dimensions.spacingL)
-        }
-    }
-    
-    private var titleFieldSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingXS) {
-            // Label
-            titleSectionLabel
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Title")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
             
-            // Text field
-            titleTextField
+            TextField("Checklist title", text: $title)
+                .font(AppTheme.Typography.title3().bold())
+                .foregroundColor(AppTheme.Colors.textPrimary)
+                .padding(16)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(12)
+                .shadow(color: AppTheme.Colors.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
+                .focused($isTitleFocused)
+                .submitLabel(.next)
+                .onSubmit {
+                    isAddingNewItem = true
+                }
         }
-        .opacity(animateList ? 1 : 0)
-        .offset(y: animateList ? 0 : 10)
-        .animation(
-            AppTheme.Animations.standardCurve,
-            value: animateList
-        )
     }
     
-    private var titleSectionLabel: some View {
-        Label("Title", systemImage: "textformat")
-            .font(AppTheme.Typography.headline())
-            .foregroundColor(AppTheme.Colors.textSecondary)
-            .padding(.horizontal)
-    }
-    
-    private var titleTextField: some View {
-        TextField("Checklist title", text: $title)
-            .font(AppTheme.Typography.title3())
-            .padding()
-            .background(titleTextFieldBackground)
-            .overlay(titleTextFieldBorder)
-            .padding(.horizontal)
-    }
-    
-    private var titleTextFieldBackground: some View {
-        RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-            .fill(colorScheme == .dark ? 
-                  AppTheme.Colors.cardSurface : 
-                  AppTheme.Colors.secondaryBackground)
-    }
-    
-    private var titleTextFieldBorder: some View {
-        RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-            .stroke(AppTheme.Colors.divider, lineWidth: 1)
-    }
-    
-    // MARK: - Checklist Items
-    
-    private var checklistItemsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingS) {
+    private var itemsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
             // Header
-            itemsSectionHeader
+            Text("Items")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
             
-            // Existing items list
-            itemsList
-            
-            // Add new item section
-            addNewItemSection
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusL)
-                .fill(AppTheme.Colors.cardSurface)
-                .shadow(
-                    color: AppTheme.Colors.cardShadow.opacity(0.1),
-                    radius: 4,
-                    x: 0,
-                    y: 2
+            // Items container
+            VStack(spacing: 0) {
+                // Existing items
+                if items.isEmpty && !isAddingNewItem {
+                    emptyStateView
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(items.indices, id: \.self) { index in
+                            ChecklistItemRow(
+                                item: binding(for: items[index]),
+                                isAddingNewItem: isAddingNewItem,
+                                onDelete: { deleteItem(at: index) }
+                            )
+                            .id(items[index].id)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: animateItems)
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+                
+                // Add new item
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundColor(AppTheme.Colors.accent.opacity(0.7))
+                        .font(.system(size: 20))
+                    
+                    TextField("Add a new item", text: $newItem)
+                        .font(AppTheme.Typography.body())
+                        .submitLabel(.done)
+                        .focused($isAddingNewItem)
+                        .onSubmit {
+                            addItem()
+                        }
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppTheme.Colors.secondaryBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                        )
                 )
-        )
-        .padding(.horizontal)
-        .opacity(animateList ? 1 : 0)
-        .offset(y: animateList ? 0 : 10)
-        .animation(
-            AppTheme.Animations.standardCurve.delay(0.1),
-            value: animateList
-        )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isAddingNewItem = true
+                }
+            }
+            .padding(16)
+            .background(AppTheme.Colors.secondaryBackground)
+            .cornerRadius(12)
+            .shadow(color: AppTheme.Colors.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
+        }
     }
     
-    private var itemsSectionHeader: some View {
-        HStack {
-            Label("Items", systemImage: "checklist")
+    private var emptyStateView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "checklist")
+                .font(.system(size: 32))
+                .foregroundColor(AppTheme.Colors.textTertiary)
+                .padding(.bottom, 4)
+            
+            Text("No items yet")
                 .font(AppTheme.Typography.headline())
                 .foregroundColor(AppTheme.Colors.textSecondary)
             
-            Spacer()
-            
-            Text("\(items.count) items")
+            Text("Tap to add your first item")
                 .font(AppTheme.Typography.caption())
                 .foregroundColor(AppTheme.Colors.textTertiary)
+                .padding(.bottom, 8)
         }
-    }
-    
-    private var itemsList: some View {
-        VStack(spacing: AppTheme.Dimensions.spacingXS) {
-            if items.isEmpty {
-                emptyItemsPlaceholder
-            } else {
-                ForEach(items.indices, id: \.self) { index in
-                    ChecklistItemRow(
-                        item: binding(for: items[index]),
-                        focusedField: $focusedField,
-                        onDelete: { deleteItem(item: items[index]) }
-                    )
-                    .transition(.opacity)
-                }
-            }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isAddingNewItem = true
         }
+        .transition(.opacity)
     }
     
-    private var emptyItemsPlaceholder: some View {
-        Text("No items yet. Add your first item below.")
-            .font(AppTheme.Typography.body())
-            .foregroundColor(AppTheme.Colors.textTertiary)
-            .italic()
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding()
-    }
-    
-    private var addNewItemSection: some View {
-        HStack {
-            Image(systemName: "plus.circle")
-                .foregroundColor(AppTheme.Colors.primary)
-                .font(.system(size: 20))
+    private var tagsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tags")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
             
-            TextField("Add a new item", text: $newItem)
-                .font(AppTheme.Typography.body())
-                .focused($isAddingNewItem)
-                .submitLabel(.done)
-                .onSubmit {
-                    addNewItem()
-                }
-            
-            if !newItem.isEmpty {
-                Button(action: addNewItem) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppTheme.Colors.success)
-                        .font(.system(size: 20))
-                }
-                .buttonStyle(ScaleButtonStyle())
-                .transition(.scale)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-                .stroke(AppTheme.Colors.divider, lineWidth: 1)
-        )
-    }
-    
-    // MARK: - Folder Selection
-    
-    private var folderSelectionSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingS) {
-            // Header
-            folderSectionHeader
-            
-            // Folder selector
-            folderSelector
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusL)
-                .fill(AppTheme.Colors.cardSurface)
-                .shadow(
-                    color: AppTheme.Colors.cardShadow.opacity(0.1),
-                    radius: 4,
-                    x: 0,
-                    y: 2
-                )
-        )
-        .padding(.horizontal)
-        .opacity(animateList ? 1 : 0)
-        .offset(y: animateList ? 0 : 10)
-        .animation(
-            AppTheme.Animations.standardCurve.delay(0.2),
-            value: animateList
-        )
-    }
-    
-    private var folderSectionHeader: some View {
-        Label("Folder", systemImage: "folder")
-            .font(AppTheme.Typography.headline())
-            .foregroundColor(AppTheme.Colors.textSecondary)
-    }
-    
-    private var folderSelector: some View {
-        Menu {
-            Button("None", action: {
-                selectedFolderID = nil
-            })
-            .disabled(selectedFolderID == nil)
-            
-            Divider()
-            
-            ForEach(folderStore.folders) { folder in
-                Button(folder.name, action: {
-                    selectedFolderID = folder.id
-                })
-            }
-        } label: {
-            HStack {
-                Text(selectedFolderName)
-                    .font(AppTheme.Typography.body())
-                    .foregroundColor(AppTheme.Colors.textPrimary)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(AppTheme.Colors.textTertiary)
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-                    .stroke(AppTheme.Colors.divider, lineWidth: 1)
-            )
-        }
-    }
-    
-    // MARK: - Tag Selection
-    
-    private var tagSelectionSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Dimensions.spacingS) {
-            // Header
-            tagSectionHeader
-            
-            // Tag filter
             TagFilterView(selectedTagIds: Binding(
                 get: { Set(tagIDs) },
                 set: { tagIDs = Array($0) }
             ))
-            .environmentObject(tagStore)
+            .padding(12)
+            .background(AppTheme.Colors.secondaryBackground)
+            .cornerRadius(12)
+            .shadow(color: AppTheme.Colors.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusL)
-                .fill(AppTheme.Colors.cardSurface)
-                .shadow(
-                    color: AppTheme.Colors.cardShadow.opacity(0.1),
-                    radius: 4,
-                    x: 0,
-                    y: 2
+    }
+    
+    private var folderSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Folder")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
+            
+            Menu {
+                Button("None") {
+                    withAnimation {
+                        selectedFolderID = nil
+                    }
+                }
+                
+                Divider()
+                
+                ForEach(folderStore.folders) { folder in
+                    Button(folder.name) {
+                        withAnimation {
+                            selectedFolderID = folder.id
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Label(selectedFolderName, systemImage: "folder.fill")
+                        .font(AppTheme.Typography.body())
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(AppTheme.Colors.divider, lineWidth: 1)
                 )
-        )
-        .padding(.horizontal)
-        .opacity(animateList ? 1 : 0)
-        .offset(y: animateList ? 0 : 10)
-        .animation(
-            AppTheme.Animations.standardCurve.delay(0.3),
-            value: animateList
-        )
+            }
+        }
     }
-    
-    private var tagSectionHeader: some View {
-        Label("Tags", systemImage: "tag")
-            .font(AppTheme.Typography.headline())
-            .foregroundColor(AppTheme.Colors.textSecondary)
-    }
-    
-    // MARK: - Supporting Views
     
     private var selectedFolderName: String {
         if let id = selectedFolderID, let folder = folderStore.folders.first(where: { $0.id == id }) {
             return folder.name
-        } else {
-            return "No Folder"
         }
+        return "None"
     }
     
-    private func addNewItem() {
-        guard !newItem.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        let newChecklistItem = ChecklistItem(id: UUID(), text: newItem, isDone: false)
-        
-        withAnimation {
-            items.append(newChecklistItem)
-        }
-        
-        // Clear the text field and maintain focus
-        newItem = ""
-        isAddingNewItem = true
-        
-        // Add haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-    }
-    
-    private func saveChecklist() {
-        if let checklist = existingChecklist, mode == .edit {
-            // Create updated checklist with the new properties
-            var updatedChecklist = checklist
-            updatedChecklist.title = title
-            updatedChecklist.items = items
-            updatedChecklist.folderID = selectedFolderID
-            updatedChecklist.tagIDs = tagIDs
-            
-            // Update the checklist
-            checklistStore.updateChecklist(checklist: updatedChecklist)
-        } else {
-            // Create a new checklist - passing individual properties
-            // instead of the entire ChecklistNote object
-            checklistStore.addChecklist(
-                title: title,
-                folderID: selectedFolderID,
-                tagIDs: tagIDs
-            )
-            
-            // The items will be empty initially
-            // We'll add them separately if needed or update the API
-        }
-        
-        // Add haptic feedback
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        
-        // Dismiss the view
-        dismiss()
-    }
-    
-    private func deleteItem(item: ChecklistItem) {
-        if let index = items.firstIndex(where: { $0.id == item.id }) {
-            _ = withAnimation {
-                items.remove(at: index)
-            }
-        }
-    }
+    // MARK: - Actions
     
     private func binding(for item: ChecklistItem) -> Binding<ChecklistItem> {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else {
-            fatalError("Checklist item not found")
+            fatalError("Item not found: \(item.id)")
         }
-        
         return $items[index]
     }
-}
-
-// MARK: - Supporting Views
-
-struct ChecklistItemRow: View {
-    @Binding var item: ChecklistItem
-    @Binding var focusedField: UUID?
-    @FocusState private var isTextFieldFocused: Bool
-    let onDelete: () -> Void
     
-    // MARK: - Computed Properties
-    
-    private var textColor: Color {
-        item.isDone ? AppTheme.Colors.textTertiary : AppTheme.Colors.textPrimary
-    }
-    
-    private var isDeleteButtonVisible: Bool {
-        item.text.isEmpty || isTextFieldFocused
-    }
-    
-    private var backgroundFill: Color {
-        isTextFieldFocused ? Color.blue.opacity(0.08) : Color.clear
-    }
-    
-    // MARK: - Body
-    
-    var body: some View {
-        HStack(spacing: AppTheme.Dimensions.spacingS) {
-            // Checkbox
-            checkboxView
-            
-            // Text field
-            textFieldView
-            
-            // Delete button
-            deleteButtonView
-        }
-        .padding(AppTheme.Dimensions.spacingS)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.Dimensions.radiusM)
-                .fill(backgroundFill)
-        )
-        .onChange(of: focusedField) { _, newValue in
-            isTextFieldFocused = newValue == item.id
-        }
-        .onChange(of: isTextFieldFocused) { _, newValue in
-            if newValue {
-                focusedField = item.id
-            } else if focusedField == item.id {
-                focusedField = nil
+    private func addItem() {
+        if !newItem.isEmpty {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                let item = ChecklistItem(
+                    id: UUID(),
+                    text: newItem,
+                    isDone: false
+                )
+                items.append(item)
+                newItem = ""
+                
+                // Provide haptic feedback
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                
+                // Add animation for the new item
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    focusedField = item.id
+                }
             }
         }
     }
     
-    // MARK: - Component Views
-    
-    private var checkboxView: some View {
-        AnimatedCheckbox(isChecked: $item.isDone)
-    }
-    
-    private var textFieldView: some View {
-        TextField("Item description", text: $item.text)
-            .font(AppTheme.Typography.body())
-            .foregroundColor(textColor)
-            .strikethrough(item.isDone)
-            .focused($isTextFieldFocused)
-    }
-    
-    private var deleteButtonView: some View {
-        Button(action: onDelete) {
-            Image(systemName: "trash")
-                .foregroundColor(AppTheme.Colors.error)
-                .font(.system(size: 14))
-                .padding(8)
-                .contentShape(Rectangle())
+    private func deleteItem(at index: Int) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            // Provide haptic feedback for deletion
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            
+            items.remove(at: index)
         }
-        .buttonStyle(PressableButtonStyle())
-        .opacity(isDeleteButtonVisible ? 1 : 0)
+    }
+    
+    private func saveChecklistWithAnimation() {
+        // Create haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            let finalTitle = title.isEmpty ? "Untitled Checklist" : title
+            
+            if mode == .new {
+                // Create a new checklist with items
+                let newChecklist = ChecklistNote(
+                    id: UUID(),
+                    title: finalTitle,
+                    folderID: selectedFolderID,
+                    items: items,
+                    isPinned: false,
+                    date: Date(),
+                    tagIDs: tagIDs
+                )
+                
+                // Save the new checklist
+                checklistStore.updateChecklist(checklist: newChecklist)
+            } else if let checklist = existingChecklist {
+                // Update existing checklist with new values
+                checklistStore.updateChecklist(
+                    checklist: checklist,
+                    title: finalTitle,
+                    items: items,
+                    folderID: selectedFolderID,
+                    tagIDs: tagIDs
+                )
+            }
+            
+            dismiss()
+        }
+    }
+}
+
+// MARK: - Enhanced Checklist Item Row
+struct ChecklistItemRow: View {
+    @Binding var item: ChecklistItem
+    @State var isAddingNewItem: Bool
+    var onDelete: () -> Void
+    
+    @State private var isFocused = false
+    @FocusState private var isTextFieldFocused: Bool
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Checkbox
+            Button(action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    // Toggle the isDone property directly
+                    item.isDone.toggle()
+                    
+                    // Provide haptic feedback
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+            }) {
+                Circle()
+                    .stroke(item.isDone ? AppTheme.Colors.accent : AppTheme.Colors.divider, lineWidth: 1.5)
+                    .frame(width: 22, height: 22)
+                    .overlay(
+                        Circle()
+                            .fill(item.isDone ? 
+                                  AppTheme.Colors.accent : Color.clear)
+                            .frame(width: 14, height: 14)
+                    )
+            }
+            .buttonStyle(PressableButtonStyle())
+            
+            // Text field
+            TextField("", text: $item.text)
+                .font(AppTheme.Typography.body())
+                .foregroundColor(item.isDone ? AppTheme.Colors.textSecondary : AppTheme.Colors.textPrimary)
+                .strikethrough(item.isDone)
+                .focused($isTextFieldFocused)
+                .onChange(of: isTextFieldFocused) { oldValue, newValue in
+                    if newValue {
+                        isFocused = true
+                        // Signal parent that we're not adding a new item anymore
+                        withAnimation {
+                            isAddingNewItem = false
+                        }
+                    }
+                }
+            
+            Spacer()
+            
+            // Delete button
+            Button(action: onDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(AppTheme.Colors.textTertiary)
+                    .font(.system(size: 16))
+            }
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(item.isDone ? 
+                      AppTheme.Colors.secondaryBackground.opacity(0.5) : 
+                      AppTheme.Colors.secondaryBackground)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            isTextFieldFocused = true
+        }
     }
 }

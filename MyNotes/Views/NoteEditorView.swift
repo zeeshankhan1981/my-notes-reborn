@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 enum NoteEditorMode {
     case new
@@ -11,397 +12,482 @@ struct NoteEditorView: View {
     @EnvironmentObject var folderStore: FolderStore
     @EnvironmentObject var tagStore: TagStore
     @Environment(\.dismiss) var dismiss
-
+    
+    // Note data
+    @State private var title: String
+    @State private var content: String
+    @State private var attributedContent: NSAttributedString
+    @State private var isPinned: Bool
+    @State private var selectedFolderID: UUID?
+    @State private var tagIDs = [UUID]()
+    
+    // UI state
+    @State private var showActionSheet = false
+    @State private var showDeleteConfirmation = false
+    @State private var showImagePicker = false
+    @State private var isFocusMode = false
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var imageData: Data?
+    @State private var activeFormatting = Set<TextFormatting>()
+    @State private var animateChanges = false
+    @State private var contentOpacity: CGFloat = 1
+    
     let mode: NoteEditorMode
     let existingNote: Note?
     
-    @State private var title = ""
-    @State private var content = ""
-    @State private var attributedContent = NSAttributedString()
-    @State private var imageData: Data?
-    @State private var selectedItem: PhotosPickerItem?
-    @State private var selectedFolderID: UUID?
-    @State private var tagIDs = [UUID]()
-    @State private var isShowingFormatting = false
-    @State private var isFocusMode = false
-    @State private var isShowingDeleteConfirmation = false
-    
-    // Original initializer for backward compatibility
     init(mode: NoteEditorMode, existingNote: Note?) {
         self.mode = mode
         self.existingNote = existingNote
         
-        if let note = existingNote, mode == .edit {
+        if let note = existingNote {
             _title = State(initialValue: note.title)
             _content = State(initialValue: note.content)
-            _imageData = State(initialValue: note.imageData)
+            _isPinned = State(initialValue: note.isPinned)
             _selectedFolderID = State(initialValue: note.folderID)
             _tagIDs = State(initialValue: note.tagIDs)
             
             // Initialize attributedContent from data if available
             if let attributedContentData = note.attributedContent,
                let decodedAttributedString = try? NSAttributedString(
-                   data: attributedContentData,
-                   options: [.documentType: NSAttributedString.DocumentType.rtfd],
-                   documentAttributes: nil) {
+                data: attributedContentData,
+                options: [.documentType: NSAttributedString.DocumentType.rtfd],
+                documentAttributes: nil) {
                 _attributedContent = State(initialValue: decodedAttributedString)
             } else {
                 // Fallback to regular content with default attributes
                 _attributedContent = State(initialValue: NSAttributedString(
                     string: note.content,
-                    attributes: [.font: UIFont.monospacedSystemFont(ofSize: 16, weight: .regular)]
+                    attributes: [.font: UIFont.systemFont(ofSize: 16, weight: .regular)]
                 ))
             }
+            
+            _imageData = State(initialValue: note.imageData)
         } else {
-            // Set default attributed content for new notes
-            _attributedContent = State(initialValue: NSAttributedString(
-                string: "",
-                attributes: [.font: UIFont.monospacedSystemFont(ofSize: 16, weight: .regular)]
-            ))
+            _title = State(initialValue: "")
+            _content = State(initialValue: "")
+            _attributedContent = State(initialValue: NSAttributedString())
+            _isPinned = State(initialValue: false)
+            _selectedFolderID = State(initialValue: nil)
+            _tagIDs = State(initialValue: [])
+            _imageData = State(initialValue: nil)
         }
     }
     
     var body: some View {
         ZStack {
-            // Main editor content
-            editorContent
-                .opacity(isFocusMode ? 0.3 : 1.0)
-            
-            // Focus mode overlay (only visible when focus mode is active)
-            if isFocusMode {
-                VStack(spacing: 0) {
-                    Spacer()
-                    
-                    RichTextEditor(
-                        text: $attributedContent,
-                        placeholder: "Type your note content here...",
-                        onTextChange: { newText in
-                            attributedContent = newText
-                            content = newText.string
-                        }
-                    )
-                    .frame(maxWidth: .infinity)
-                    .padding(AppTheme.Dimensions.spacing)
-                    .background(AppTheme.Colors.focusBackground)
-                    .cornerRadius(AppTheme.Dimensions.radiusL)
-                    .shadow(
-                        color: AppTheme.Colors.cardShadow.opacity(0.2),
-                        radius: 8,
-                        x: 0,
-                        y: 4
-                    )
-                    .padding(.horizontal, AppTheme.Dimensions.spacingL)
-                    
-                    Spacer()
-                    
-                    Button("Exit Focus Mode") {
-                        withAnimation {
-                            isFocusMode = false
-                        }
+            // Background
+            AppTheme.Colors.background
+                .ignoresSafeArea()
+
+            // Regular editor mode
+            ScrollView {
+                VStack(spacing: 20) {
+                    VStack(spacing: 12) {
+                        titleSection
+                            .opacity(animateChanges ? 1 : 0)
+                            .offset(y: animateChanges ? 0 : 20)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7), value: animateChanges)
+
+                        formattingToolbar
+                            .opacity(animateChanges ? 1 : 0)
+                            .offset(y: animateChanges ? 0 : -10)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7).delay(0.05), value: animateChanges)
                     }
-                    .buttonStyle(FilledButtonStyle())
-                    .padding(.bottom)
+
+                    contentSection
+                        .opacity(animateChanges ? 1 : 0)
+                        .offset(y: animateChanges ? 0 : 30)
+                        .animation(
+                            .spring(response: 0.5, dampingFraction: 0.7)
+                            .delay(isFocusMode ? 0 : 0.1),
+                            value: animateChanges
+                        )
+
+                    if !isFocusMode {
+                        tagSection
+                            .opacity(animateChanges ? 1 : 0)
+                            .offset(y: animateChanges ? 0 : 40)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.15), value: animateChanges)
+
+                        folderSection
+                            .opacity(animateChanges ? 1 : 0)
+                            .offset(y: animateChanges ? 0 : 50)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.2), value: animateChanges)
+
+                        imageSection
+                            .opacity(animateChanges ? 1 : 0)
+                            .offset(y: animateChanges ? 0 : 60)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.25), value: animateChanges)
+                    }
                 }
-                .background(Color.black.opacity(0.05))
-                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .center)))
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
+            }
+
+            // Focus mode toggle button
+            VStack {
+                Spacer()
+
+                HStack {
+                    Spacer()
+
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            isFocusMode.toggle()
+                        }
+
+                        // Haptic feedback
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    }) {
+                        Image(systemName: isFocusMode ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(16)
+                            .background(AppTheme.Colors.accent)
+                            .clipShape(Circle())
+                            .shadow(color: AppTheme.Colors.accent.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .offset(y: -20)
+                    .padding(.trailing, 20)
+                    .opacity(animateChanges ? 1 : 0)
+                    .scaleEffect(animateChanges ? 1 : 0.5)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.3), value: animateChanges)
+                }
             }
         }
+        .navigationBarTitle(isFocusMode ? "" : mode == .new ? "New Note" : "Edit Note", displayMode: .inline)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                CancelButton {
-                    dismiss()
-                }
-            }
-            
             ToolbarItem(placement: .principal) {
-                Text(mode == .new ? "New Note" : "Edit Note")
-                    .font(AppTheme.Typography.headline())
-                    .foregroundColor(AppTheme.Colors.textPrimary)
+                Text(isFocusMode ? title : "")
+                    .font(AppTheme.Typography.headline().bold())
+                    .opacity(isFocusMode ? 0.7 : 1)
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
-                HStack(spacing: 16) {
-                    // Only show delete button in edit mode
-                    if mode == .edit {
-                        Button {
-                            isShowingDeleteConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
-                                .foregroundColor(Color.red)
-                        }
-                        .accessibilityLabel("Delete Note")
-                    }
-                    
-                    SaveButton {
-                        saveNote()
-                        dismiss()
+                SaveButton(action: saveNoteWithAnimation)
+            }
+
+            ToolbarItem(placement: .navigationBarLeading) {
+                if mode == .edit {
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(AppTheme.Colors.danger)
                     }
                 }
             }
         }
-        .confirmationDialog("Are you sure you want to delete this note?", isPresented: $isShowingDeleteConfirmation, titleVisibility: .visible) {
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    animateChanges = true
+                }
+            }
+        }
+        .confirmationDialog("Are you sure you want to delete this note?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 if let note = existingNote {
                     noteStore.delete(note: note)
-                    // Use haptic feedback for destructive action
-                    let generator = UINotificationFeedbackGenerator()
-                    generator.notificationOccurred(.success)
+                    
+                    dismiss()
+
+                    // Haptic feedback
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
-                dismiss()
             }
             Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This action cannot be undone.")
         }
     }
-    
-    // Main editor content
-    private var editorContent: some View {
-        ScrollView {
-            VStack(spacing: AppTheme.Dimensions.spacingL) {
-                // Title field
-                FormFieldView(label: "Title", iconName: "textformat") {
-                    TextField("Note title", text: $title)
-                        .font(AppTheme.Typography.title3())
-                }
-                
-                // Content field
-                FormFieldView(label: "Content", iconName: "text.justify") {
-                    VStack(alignment: .trailing, spacing: AppTheme.Dimensions.smallSpacing) {
-                        if isRichTextEditorAvailable() {
-                            RichTextEditor(
-                                text: $attributedContent,
-                                placeholder: "Type your note content here...",
-                                onTextChange: { newText in
-                                    attributedContent = newText
-                                    content = newText.string
-                                }
-                            )
-                            .frame(minHeight: 200)
-                            .padding(.horizontal, AppTheme.Dimensions.spacingXS)
-                            .padding(.vertical, AppTheme.Dimensions.spacingXS)
-                            .background(AppTheme.Colors.secondaryBackground)
-                            .cornerRadius(AppTheme.Dimensions.radiusM)
-                            .shadow(
-                                color: AppTheme.Colors.cardShadow.opacity(0.1),
-                                radius: 2,
-                                x: 0,
-                                y: 1
-                            )
-                        } else {
-                            TextField("Note content", text: $content)
-                                .font(AppTheme.Typography.body())
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
-                        }
-                        
-                        HStack {
-                            Spacer()
-                            
-                            if !isFocusMode {
-                                Button {
-                                    withAnimation {
-                                        isShowingFormatting.toggle()
-                                    }
-                                } label: {
-                                    Label("Format", systemImage: "textformat")
-                                        .font(AppTheme.Typography.caption())
-                                        .foregroundColor(AppTheme.Colors.textSecondary)
-                                }
-                                .buttonStyle(PressableButtonStyle())
-                            }
-                            
-                            Button {
-                                withAnimation {
-                                    isFocusMode.toggle()
-                                }
-                            } label: {
-                                Label(
-                                    isFocusMode ? "Exit Focus" : "Focus Mode",
-                                    systemImage: isFocusMode ? "eye" : "eye.slash"
-                                )
-                                .font(AppTheme.Typography.caption())
-                                .foregroundColor(AppTheme.Colors.textSecondary)
-                            }
-                            .buttonStyle(PressableButtonStyle())
-                        }
+
+    // MARK: - UI Components
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Title")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
+
+            TextField("Note title", text: $title)
+                .font(AppTheme.Typography.title3().bold())
+                .foregroundColor(AppTheme.Colors.textPrimary)
+                .padding(16)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(12)
+                .shadow(color: AppTheme.Colors.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
+        }
+    }
+
+    private var formattingToolbar: some View {
+        HStack(spacing: 14) {
+            FormatButton(icon: "bold", action: {
+                applyFormatting(.bold)
+            }, isActive: activeFormatting.contains(.bold))
+
+            FormatButton(icon: "italic", action: {
+                applyFormatting(.italic)
+            }, isActive: activeFormatting.contains(.italic))
+
+            FormatButton(icon: "underline", action: {
+                applyFormatting(.underline)
+            }, isActive: activeFormatting.contains(.underline))
+
+            Spacer()
+
+            FormatButton(icon: "text.alignleft", action: {
+                applyFormatting(.alignLeft)
+            }, isActive: activeFormatting.contains(.alignLeft))
+
+            FormatButton(icon: "text.aligncenter", action: {
+                applyFormatting(.alignCenter)
+            }, isActive: activeFormatting.contains(.alignCenter))
+
+            FormatButton(icon: "text.alignright", action: {
+                applyFormatting(.alignRight)
+            }, isActive: activeFormatting.contains(.alignRight))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(AppTheme.Colors.secondaryBackground.opacity(0.8))
+        .cornerRadius(12)
+        .shadow(color: AppTheme.Colors.cardShadow.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+
+    private var contentSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !isFocusMode {
+                Text("Content")
+                    .font(AppTheme.Typography.caption())
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+                    .padding(.leading, 4)
+            }
+
+            ZStack(alignment: .topLeading) {
+                RichTextEditor(
+                    text: $attributedContent,
+                    placeholder: "Write something...",
+                    onTextChange: { newText in
+                        attributedContent = newText
+                        content = newText.string
+                    },
+                    activeFormatting: $activeFormatting
+                )
+                .padding(16)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(12)
+                .opacity(contentOpacity)
+                .onChange(of: isFocusMode) { _, newValue in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        contentOpacity = newValue ? 0.8 : 1
                     }
-                }
-                
-                // Image field
-                FormFieldView(label: "Image", iconName: "photo") {
-                    VStack(alignment: .leading, spacing: AppTheme.Dimensions.smallSpacing) {
-                        if let imageData = imageData, let uiImage = UIImage(data: imageData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 200)
-                                .frame(maxWidth: .infinity)
-                                .overlay(
-                                    Button(action: {
-                                        withAnimation {
-                                            self.imageData = nil
-                                            self.selectedItem = nil
-                                        }
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(.white)
-                                            .background(Circle().fill(Color.black.opacity(0.7)))
-                                            .padding(8)
-                                    }, alignment: .topTrailing
-                                )
-                                .padding(.horizontal, AppTheme.Dimensions.spacing)
-                        } else {
-                            PhotosPicker(selection: $selectedItem, matching: .images) {
-                                HStack {
-                                    Image(systemName: "photo")
-                                        .font(.system(size: 20))
-                                        .foregroundColor(AppTheme.Colors.textTertiary)
-                                    
-                                    Text("Add Image")
-                                        .font(AppTheme.Typography.body())
-                                        .foregroundColor(AppTheme.Colors.textSecondary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(AppTheme.Dimensions.smallSpacing)
-                                .overlay(
-                                    Rectangle()
-                                        .stroke(AppTheme.Colors.divider, lineWidth: 1)
-                                )
-                                .padding(.horizontal, AppTheme.Dimensions.spacing)
-                            }
-                            .onChange(of: selectedItem) { oldValue, newValue in
-                                Task {
-                                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                                        imageData = data
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Folder field
-                FormFieldView(label: "Folder", iconName: "folder") {
-                    Menu {
-                        Button("None") {
-                            selectedFolderID = nil
-                        }
-                        
-                        Divider()
-                        
-                        ForEach(folderStore.folders) { folder in
-                            Button(folder.name) {
-                                selectedFolderID = folder.id
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(selectedFolderName)
-                                .font(AppTheme.Typography.body())
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                            Spacer()
-                            Image(systemName: "chevron.down")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.Colors.textSecondary)
-                        }
-                        .padding(AppTheme.Dimensions.smallSpacing)
-                        .overlay(
-                            Rectangle()
-                                .stroke(AppTheme.Colors.divider, lineWidth: 1)
-                        )
-                        .padding(.horizontal, AppTheme.Dimensions.spacing)
-                    }
-                }
-                
-                // Tags field
-                FormFieldView(label: "Tags", iconName: "tag") {
-                    TagFilterView(selectedTagIds: Binding(
-                        get: { Set(tagIDs) },
-                        set: { tagIDs = Array($0) }
-                    ))
-                    .padding(.horizontal, AppTheme.Dimensions.spacing)
                 }
             }
-            .padding(.vertical, AppTheme.Dimensions.spacingL)
+            .frame(minHeight: isFocusMode ? 300 : 200)
         }
-        .background(AppTheme.Colors.background)
     }
-    
+
+    private var tagSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tags")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
+
+            TagFilterView(selectedTagIds: Binding(
+                get: { Set(tagIDs) },
+                set: { tagIDs = Array($0) }
+            ))
+            .padding(12)
+            .background(AppTheme.Colors.secondaryBackground)
+            .cornerRadius(12)
+        }
+    }
+
+    private var folderSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Folder")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
+
+            Menu {
+                Button("None") {
+                    selectedFolderID = nil
+                }
+
+                Divider()
+
+                ForEach(folderStore.folders) { folder in
+                    Button(folder.name) {
+                        selectedFolderID = folder.id
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selectedFolderName)
+                        .font(AppTheme.Typography.body())
+                        .foregroundColor(AppTheme.Colors.textPrimary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                }
+                .padding(16)
+                .background(AppTheme.Colors.secondaryBackground)
+                .cornerRadius(12)
+            }
+        }
+    }
+
+    private var imageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Image")
+                .font(AppTheme.Typography.caption())
+                .foregroundColor(AppTheme.Colors.textSecondary)
+                .padding(.leading, 4)
+
+            if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                ZStack(alignment: .topTrailing) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 200)
+                        .cornerRadius(12)
+                        .transition(.opacity)
+
+                    Button(action: {
+                        withAnimation {
+                            self.imageData = nil
+                            self.selectedItem = nil
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.white)
+                            .background(Circle().fill(Color.black.opacity(0.6)))
+                            .font(.system(size: 20))
+                    }
+                    .padding(8)
+                }
+            } else {
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    HStack {
+                        Spacer()
+                        Label("Add Image", systemImage: "photo")
+                            .font(AppTheme.Typography.body())
+                            .foregroundColor(AppTheme.Colors.accent)
+                        Spacer()
+                    }
+                    .padding(.vertical, 12)
+                    .background(AppTheme.Colors.secondaryBackground)
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(AppTheme.Colors.divider, lineWidth: 1)
+                    )
+                }
+                .onChange(of: selectedItem) { oldValue, newValue in
+                    if let newValue {
+                        Task {
+                            if let data = try? await newValue.loadTransferable(type: Data.self) {
+                                imageData = data
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var selectedFolderName: String {
         if let id = selectedFolderID, let folder = folderStore.folders.first(where: { $0.id == id }) {
             return folder.name
-        } else {
-            return "None"
         }
+        return "None"
     }
-    
-    private func isRichTextEditorAvailable() -> Bool {
-        // Currently always returning true as rich text editing is supported
-        // In the future, this could check for specific features or conditions
-        return true
-    }
-    
-    private func applyFormatting(_ formatting: RichTextEditor.TextFormatting) {
-        // Find the rich text editor and apply formatting
-        NotificationCenter.default.post(
-            name: Notification.Name("ApplyRichTextFormatting"),
-            object: formatting
-        )
-    }
-    
-    private func saveNote() {
+
+    // MARK: - Actions
+
+    private func saveNoteWithAnimation() {
+        // Create haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
         // Create attributed content data
         let attributedContentData = try? attributedContent.data(
             from: NSRange(location: 0, length: attributedContent.length),
             documentAttributes: [.documentType: NSAttributedString.DocumentType.rtfd]
         )
         
-        // Validate input - ensure title is not empty
-        let finalTitle = title.isEmpty ? "Untitled Note" : title
-        
-        // Print debug info
-        print("NoteEditorView: Saving note with title '\(finalTitle)' and mode \(mode)")
-        
-        if mode == .new {
-            noteStore.addNote(
-                title: finalTitle,
-                content: content,
-                folderID: selectedFolderID,
-                imageData: imageData,
-                attributedContent: attributedContentData,
-                tagIDs: tagIDs
-            )
-            print("NoteEditorView: Added new note with title '\(finalTitle)'")
-        } else if let note = existingNote {
-            noteStore.update(
-                note: note,
-                title: finalTitle,
-                content: content,
-                folderID: selectedFolderID,
-                imageData: imageData,
-                attributedContent: attributedContentData,
-                tagIDs: tagIDs
-            )
-            print("NoteEditorView: Updated existing note with title '\(finalTitle)'")
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            // Validate input - ensure title is not empty
+            let finalTitle = title.isEmpty ? "Untitled Note" : title
+            
+            if mode == .new {
+                // Add new note
+                noteStore.addNote(
+                    title: finalTitle,
+                    content: content,
+                    folderID: selectedFolderID,
+                    imageData: imageData,
+                    attributedContent: attributedContentData,
+                    tagIDs: tagIDs
+                )
+            } else if let note = existingNote {
+                // Update existing note
+                noteStore.update(
+                    note: note,
+                    title: finalTitle,
+                    content: content,
+                    folderID: selectedFolderID,
+                    imageData: imageData,
+                    attributedContent: attributedContentData,
+                    tagIDs: tagIDs
+                )
+            }
+            
+            dismiss()
         }
     }
-}
 
-// Minimalist format button for the toolbar
-struct FormatButton: View {
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
+    private func applyFormatting(_ formatting: TextFormatting) {
+        if activeFormatting.contains(formatting) {
+            activeFormatting.remove(formatting)
+        } else {
+            activeFormatting.insert(formatting)
+
+            // Handle mutually exclusive formatting options
+            if formatting == .alignLeft {
+                activeFormatting.remove(.alignCenter)
+                activeFormatting.remove(.alignRight)
+            } else if formatting == .alignCenter {
+                activeFormatting.remove(.alignLeft)
+                activeFormatting.remove(.alignRight)
+            } else if formatting == .alignRight {
+                activeFormatting.remove(.alignLeft)
+                activeFormatting.remove(.alignCenter)
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+
+        // Sync with RichTextEditor
+        syncFormattingToRichTextEditor(formatting)
+
+        // Provide haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+
+    // Update formatting in the RichTextEditor
+    private func syncFormattingToRichTextEditor(_ formatting: TextFormatting) {
+        // The formatting is already updated in the activeFormatting Set
+        // which is directly bound to the editor, so no additional conversion needed
+        
+        // Post notification to apply formatting
+        let notificationName = Notification.Name("ApplyRichTextFormatting")
+        NotificationCenter.default.post(name: notificationName, object: formatting)
     }
 }

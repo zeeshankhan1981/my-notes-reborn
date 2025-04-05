@@ -122,7 +122,7 @@ When implementing design changes:
 5. Verify accessibility with VoiceOver
 6. Add proper haptic feedback for important actions
 
-## Next Steps for v0.3.3
+## Next Steps for v0.3.8
 
 1. **Complete Note Cards & Lists Enhancements**
    - Finish applying new card styling consistently
@@ -134,77 +134,15 @@ When implementing design changes:
    - Document known design issues for testers to validate
    - Prepare survey questions about the visual experience
 
-3. **Documentation Updates**
-   - Create design system documentation
-   - Update UI component usage guidelines
-   - Prepare visual style guide for future developers
-
-## Rich Text Editor Roadmap
-
-### Phase 1: Refinement (v0.3.4)
-
-1. **Selection Feedback Improvements**
-   - Add visual indicators when formatting buttons are pressed without text selection
-   - Implement active state indicators for formatting buttons when formatted text is selected
-   - Add haptic feedback for formatting actions
-   - Improve focus state visibility when editing
-
-2. **Toolbar Enhancements**
-   - Reorganize toolbar buttons with better grouping for related actions
-   - Add expandable "more" button for less common formatting options
-   - Ensure toolbar is thumb-reachable on all devices
-   - Implement proper active/inactive states for all formatting buttons
-
-3. **Performance Optimization**
-   - Improve performance when editing long documents
-   - Optimize attributed string handling and rendering
-   - Fix any memory issues with large text content
-   - Ensure smooth scrolling while editing
-
-### Phase 2: Feature Extensions (v0.4.0)
-
-1. **Text Structure Support**
-   - Implement existing but unused formatting options:
-     - Text alignment (left, center, right)
-     - Bullet and numbered lists
-   - Add paragraph spacing controls
-   - Implement basic heading levels (H1, H2, H3)
-
-2. **Enhanced Media Integration**
-   - Improve inline image support within text
-   - Add basic image formatting (resize, align)
-   - Support image captions
-   - Optimize image storage and loading
-
-3. **UX Improvements**
-   - Enhance "focus mode" with more customization options
-   - Add keyboard shortcuts for common formatting actions
-   - Implement better undo/redo visualizations
-   - Improve text selection handles and controls
-
-### Phase 3: Mobile-Optimized Experience (v0.5.0)
-
-1. **iOS-Native Experience**
-   - Ensure all interactions follow iOS design guidelines
-   - Optimize for gesture-based formatting
-   - Make better use of context menus for formatting options
-   - Implement proper Dynamic Type support
-
-2. **Data & Export**
-   - Add options to export formatted notes (PDF, HTML)
-   - Ensure format compatibility with possible future sync solutions
-   - Implement proper print formatting
-   - Add support for copying rich text to other apps
-
-3. **Accessibility**
-   - Ensure all formatting controls are fully accessible
-   - Add support for assistive technologies when formatting
-   - Implement proper VoiceOver descriptions for formatted content
-   - Create accessibility documentation for rich text features
+3. **Documentation Updates ✅**
+   - Create design system documentation ✅
+   - Update UI component usage guidelines ✅  
+   - Prepare visual style guide for future developers ✅
+   - Add comprehensive "Creating Notes and Checklists" guide ✅
 
 ## Comprehensive UI/UX Evolution Roadmap
 
-### 1. User Experience Transformation
+### 1. User Experience Transformation (Claude)
 
 #### Phase 1: Core Interaction Refinement (Q2 2025)
 - **Advanced Gesture System**
