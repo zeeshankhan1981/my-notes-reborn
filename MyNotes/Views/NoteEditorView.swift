@@ -25,7 +25,7 @@ struct NoteEditorView: View {
     @State private var attributedContent: NSAttributedString
     @State private var isPinned: Bool
     @State private var selectedFolderID: UUID?
-    @State private var tagIDs = [UUID]()
+    @State private var tagIDs: [UUID]
     
     // UI state
     @State private var showActionSheet = false
@@ -33,7 +33,8 @@ struct NoteEditorView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var showFormatOptions = false
-    @State private var showImagePicker = false
+    @State private var isEditing = true
+    @State private var activeFormatting: Set<TextFormatting> = []
     @FocusState private var isEditorFocused: Bool
     @FocusState private var isTitleFocused: Bool
     
@@ -51,7 +52,7 @@ struct NoteEditorView: View {
             _content = State(initialValue: note.content)
             _isPinned = State(initialValue: note.isPinned)
             _selectedFolderID = State(initialValue: note.folderID)
-            _tagIDs = State(initialValue: note.tagIDs ?? [])
+            _tagIDs = State(initialValue: note.tagIDs)
             
             if let attributedContentData = note.attributedContent,
                let attributedString = try? NSAttributedString(
@@ -75,6 +76,7 @@ struct NoteEditorView: View {
             _attributedContent = State(initialValue: NSAttributedString(string: ""))
             _isPinned = State(initialValue: false)
             _selectedFolderID = State(initialValue: nil)
+            _tagIDs = State(initialValue: [])
             _imageData = State(initialValue: nil)
         }
     }
@@ -82,7 +84,7 @@ struct NoteEditorView: View {
     var body: some View {
         ZStack {
             // Background
-            AppTheme.Colors.background
+            Color(.systemBackground)
                 .ignoresSafeArea()
             
             // Main content
@@ -104,56 +106,44 @@ struct NoteEditorView: View {
                             .padding(.bottom, 8)
                             .focused($isTitleFocused)
                         
-                        // Content field - simple text editor
-                        TextEditor(text: $content)
-                            .font(.body)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.clear)
-                            .padding(.horizontal, 16)
-                            .focused($isEditorFocused)
-                            .onChange(of: content) { _, newValue in
-                                // Update attributed content
-                                let attributedString = NSMutableAttributedString(string: newValue)
-                                attributedString.addAttributes(
-                                    [.font: UIFont.preferredFont(forTextStyle: .body)],
-                                    range: NSRange(location: 0, length: newValue.count)
-                                )
-                                attributedContent = attributedString
-                            }
+                        // Content field - using BasicTextEditor
+                        BasicTextEditor(
+                            text: $content,
+                            attributedText: $attributedContent,
+                            placeholder: "Start writing...",
+                            isEditing: $isEditing
+                        )
+                        .padding(.horizontal, 16)
+                        .focused($isEditorFocused)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             
-            // Formatting and image buttons at the bottom right
+            // Bottom formatting buttons - similar to Bear Notes
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     
-                    // Format button with popover
+                    // Format button
                     Button(action: {
                         showFormatOptions.toggle()
                     }) {
                         Image(systemName: "textformat")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .frame(width: 44, height: 44)
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                            .frame(width: 36, height: 36)
                             .background(Circle().fill(Color(.systemGray6)))
-                    }
-                    .popover(isPresented: $showFormatOptions, arrowEdge: .bottom) {
-                        FormatOptionsView(content: $content)
-                            .frame(width: 300, height: 200)
-                            .padding()
                     }
                     .padding(.trailing, 8)
                     
                     // Image picker button
                     PhotosPicker(selection: $selectedItem, matching: .images) {
                         Image(systemName: "photo")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppTheme.Colors.textPrimary)
-                            .frame(width: 44, height: 44)
+                            .font(.system(size: 16))
+                            .foregroundColor(.primary)
+                            .frame(width: 36, height: 36)
                             .background(Circle().fill(Color(.systemGray6)))
                     }
                     .onChange(of: selectedItem) { _, newItem in
@@ -170,21 +160,29 @@ struct NoteEditorView: View {
             
             // Show image if selected
             if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                Color.black.opacity(0.5)
+                    .edgesIgnoringSafeArea(.all)
+                    .onTapGesture {
+                        withAnimation {
+                            self.imageData = nil
+                            self.selectedItem = nil
+                        }
+                    }
+                
                 VStack {
-                    Spacer()
-                    
                     ZStack(alignment: .topTrailing) {
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFit()
-                            .frame(height: 200)
+                            .frame(maxWidth: .infinity)
+                            .frame(maxHeight: 300)
                             .cornerRadius(8)
                             .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                             )
+                            .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                             .padding()
                         
                         Button(action: {
@@ -200,95 +198,154 @@ struct NoteEditorView: View {
                         }
                         .padding(24)
                     }
-                    
-                    Spacer()
                 }
-                .background(Color.black.opacity(0.5))
-                .edgesIgnoringSafeArea(.all)
                 .transition(.opacity)
                 .zIndex(10)
+            }
+            
+            // Format options sheet
+            if showFormatOptions {
+                Color.black.opacity(0.2)
+                    .edgesIgnoringSafeArea(.all)
+                    .onTapGesture {
+                        showFormatOptions = false
+                    }
+                
+                VStack {
+                    Spacer()
+                    
+                    VStack(spacing: 16) {
+                        Text("Text Formatting")
+                            .font(.headline)
+                            .padding(.top, 16)
+                        
+                        HStack(spacing: 30) {
+                            FormatOptionButton(formatting: .bold, isActive: activeFormatting.contains(.bold)) {
+                                applyFormatting(.bold)
+                            }
+                            FormatOptionButton(formatting: .italic, isActive: activeFormatting.contains(.italic)) {
+                                applyFormatting(.italic)
+                            }
+                            FormatOptionButton(formatting: .underline, isActive: activeFormatting.contains(.underline)) {
+                                applyFormatting(.underline)
+                            }
+                        }
+                        
+                        HStack(spacing: 30) {
+                            FormatOptionButton(formatting: .heading, isActive: activeFormatting.contains(.heading)) {
+                                applyFormatting(.heading)
+                            }
+                            FormatOptionButton(formatting: .list, isActive: activeFormatting.contains(.list)) {
+                                applyFormatting(.list)
+                            }
+                            FormatOptionButton(formatting: .quote, isActive: activeFormatting.contains(.quote)) {
+                                applyFormatting(.quote)
+                            }
+                        }
+                        
+                        Spacer()
+                            .frame(height: 16)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.systemBackground))
+                    )
+                    .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+                    .padding()
+                }
+                .transition(.move(edge: .bottom))
+                .zIndex(20)
             }
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
-                    environmentDismiss()
-                }) {
-                    HStack(spacing: 4) {
+            if presentationMode == .standalone {
+                // Leading toolbar items
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        environmentDismiss()
+                    }) {
                         Image(systemName: "chevron.left")
-                        Text("Back")
                     }
-                    .foregroundColor(AppTheme.Colors.accent)
                 }
-            }
-            
-            ToolbarItem(placement: .principal) {
-                Text(mode == .new ? "New Note" : "Edit Note")
-                    .font(.headline)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    saveNote()
-                    environmentDismiss()
-                }) {
-                    Text("Done")
-                        .foregroundColor(AppTheme.Colors.accent)
-                        .fontWeight(.medium)
+                
+                // Trailing toolbar items
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack {
+                        if mode == .edit {
+                            Menu {
+                                Button(action: {
+                                    isPinned.toggle()
+                                    if let note = existingNote {
+                                        noteStore.togglePin(note: note)
+                                    }
+                                }) {
+                                    Label(isPinned ? "Unpin" : "Pin", systemImage: isPinned ? "pin.slash" : "pin")
+                                }
+                                
+                                Button(role: .destructive, action: {
+                                    showDeleteConfirmation = true
+                                }) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
+                            .padding(.trailing, 8)
+                        }
+                        
+                        Button("Done") {
+                            saveNote()
+                            environmentDismiss()
+                        }
+                    }
                 }
             }
         }
         .onAppear {
-            // Auto-focus the title field if it's a new note
-            if mode == .new {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isTitleFocused = true
-                }
+            if title.isEmpty {
+                isTitleFocused = true
+            } else {
+                isEditorFocused = true
             }
         }
-        .alert(isPresented: $showDeleteConfirmation) {
-            Alert(
-                title: Text("Delete Note"),
-                message: Text("Are you sure you want to delete this note?"),
-                primaryButton: .destructive(Text("Delete")) {
-                    deleteNote()
+        .alert("Delete Note", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                if let note = existingNote {
+                    noteStore.delete(note: note)
                     environmentDismiss()
-                },
-                secondaryButton: .cancel()
-            )
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this note? This action cannot be undone.")
         }
     }
     
     // MARK: - Actions
     
     private func saveNote() {
-        // Create haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-        
-        // Create attributed content data
+        // Create attributed content data for storage
         let attributedContentData = try? attributedContent.data(
             from: NSRange(location: 0, length: attributedContent.length),
             documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
         )
         
-        if let existingNote = existingNote {
-            // Update existing note
-            noteStore.update(
-                note: existingNote,
-                title: title,
-                content: content,
-                folderID: selectedFolderID,
-                imageData: imageData,
-                attributedContent: attributedContentData,
-                tagIDs: tagIDs
-            )
-        } else {
-            // Create new note
+        if mode == .new {
             noteStore.addNote(
-                title: title,
+                title: title.isEmpty ? "Untitled" : title,
+                content: content,
+                folderID: selectedFolderID,
+                imageData: imageData,
+                attributedContent: attributedContentData,
+                tagIDs: tagIDs
+            )
+        } else if let note = existingNote {
+            noteStore.update(
+                note: note,
+                title: title.isEmpty ? "Untitled" : title,
                 content: content,
                 folderID: selectedFolderID,
                 imageData: imageData,
@@ -298,66 +355,21 @@ struct NoteEditorView: View {
         }
     }
     
-    private func deleteNote() {
-        if let note = existingNote {
-            noteStore.delete(note: note)
+    // Apply formatting to the text
+    private func applyFormatting(_ formatting: TextFormatting) {
+        // Simplified formatting approach for BasicTextEditor
+        // We'll store the formatting in our activeFormatting set
+        if activeFormatting.contains(formatting) {
+            activeFormatting.remove(formatting)
+        } else {
+            activeFormatting.insert(formatting)
         }
-    }
-}
-
-// MARK: - Format Options View
-struct FormatOptionsView: View {
-    @Binding var content: String
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Text Formatting")
-                .font(.headline)
-                .padding(.top, 8)
-            
-            HStack(spacing: 20) {
-                FormatOptionButton(title: "Bold", icon: "bold", action: { applyBold() })
-                FormatOptionButton(title: "Italic", icon: "italic", action: { applyItalic() })
-                FormatOptionButton(title: "Underline", icon: "underline", action: { applyUnderline() })
-            }
-            
-            HStack(spacing: 20) {
-                FormatOptionButton(title: "Heading", icon: "text.heading", action: { applyHeading() })
-                FormatOptionButton(title: "List", icon: "list.bullet", action: { applyList() })
-                FormatOptionButton(title: "Quote", icon: "text.quote", action: { applyQuote() })
-            }
-            
-            Spacer()
-        }
-        .padding()
-    }
-    
-    // These are placeholder functions - in a real app, you'd implement proper formatting
-    private func applyBold() {}
-    private func applyItalic() {}
-    private func applyUnderline() {}
-    private func applyHeading() {}
-    private func applyList() {}
-    private func applyQuote() {}
-}
-
-struct FormatOptionButton: View {
-    let title: String
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .padding(10)
-                    .background(Circle().fill(Color(.systemGray5)))
-                
-                Text(title)
-                    .font(.caption)
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
+        
+        // For a real implementation, you would update attributedContent here
+        // Currently, BasicTextEditor doesn't fully support rich text formatting
+        // so this is mostly UI feedback for the formatting buttons
+        
+        // Close the formatting panel after selection
+        showFormatOptions = false
     }
 }

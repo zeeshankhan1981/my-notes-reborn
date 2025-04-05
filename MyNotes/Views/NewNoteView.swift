@@ -8,12 +8,15 @@ struct NewNoteView: View {
     @Binding var isPresented: Bool
     
     @State private var title = ""
-    @State private var content = NSAttributedString()
+    @State private var content = ""
+    @State private var attributedContent = NSAttributedString()
     @State private var selectedFolderID: UUID?
     @State private var tagIDs: [UUID] = []
     @State private var selectedItem: PhotosPickerItem?
     @State private var imageData: Data?
     @State private var showFormatOptions = false
+    @State private var isEditing = true
+    @State private var activeFormatting: Set<TextFormatting> = []
     @FocusState private var focusField: Field?
     
     enum Field {
@@ -24,7 +27,7 @@ struct NewNoteView: View {
         NavigationView {
             ZStack {
                 // Background color
-                AppTheme.Colors.background
+                Color(.systemBackground)
                     .ignoresSafeArea()
                 
                 // Content
@@ -44,21 +47,13 @@ struct NewNoteView: View {
                             .padding(.bottom, 8)
                             .focused($focusField, equals: .title)
                         
-                        // Content field - simple text editor
-                        TextEditor(text: Binding(
-                            get: { content.string },
-                            set: { newValue in
-                                let attributedString = NSMutableAttributedString(string: newValue)
-                                attributedString.addAttributes(
-                                    [.font: UIFont.preferredFont(forTextStyle: .body)],
-                                    range: NSRange(location: 0, length: newValue.count)
-                                )
-                                content = attributedString
-                            }
-                        ))
-                        .font(.body)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
+                        // Content field - using BasicTextEditor
+                        BasicTextEditor(
+                            text: $content,
+                            attributedText: $attributedContent,
+                            placeholder: "Start writing...",
+                            isEditing: $isEditing
+                        )
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .frame(minHeight: 300)
@@ -67,45 +62,30 @@ struct NewNoteView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 
-                // Formatting and image buttons at the bottom right
+                // Bottom formatting buttons - similar to Bear Notes
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
                         
-                        // Format button with popover
+                        // Format button
                         Button(action: {
                             showFormatOptions.toggle()
                         }) {
                             Image(systemName: "textformat")
-                                .font(.system(size: 18))
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                                .frame(width: 44, height: 44)
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                                .frame(width: 36, height: 36)
                                 .background(Circle().fill(Color(.systemGray6)))
-                        }
-                        .popover(isPresented: $showFormatOptions, arrowEdge: .bottom) {
-                            FormatOptionsView(content: Binding(
-                                get: { content.string },
-                                set: { newValue in
-                                    let attributedString = NSMutableAttributedString(string: newValue)
-                                    attributedString.addAttributes(
-                                        [.font: UIFont.preferredFont(forTextStyle: .body)],
-                                        range: NSRange(location: 0, length: newValue.count)
-                                    )
-                                    content = attributedString
-                                }
-                            ))
-                            .frame(width: 300, height: 200)
-                            .padding()
                         }
                         .padding(.trailing, 8)
                         
                         // Image picker button
                         PhotosPicker(selection: $selectedItem, matching: .images) {
                             Image(systemName: "photo")
-                                .font(.system(size: 18))
-                                .foregroundColor(AppTheme.Colors.textPrimary)
-                                .frame(width: 44, height: 44)
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                                .frame(width: 36, height: 36)
                                 .background(Circle().fill(Color(.systemGray6)))
                         }
                         .onChange(of: selectedItem) { _, newItem in
@@ -122,21 +102,29 @@ struct NewNoteView: View {
                 
                 // Show image if selected
                 if let imageData = imageData, let uiImage = UIImage(data: imageData) {
+                    Color.black.opacity(0.5)
+                        .edgesIgnoringSafeArea(.all)
+                        .onTapGesture {
+                            withAnimation {
+                                self.imageData = nil
+                                self.selectedItem = nil
+                            }
+                        }
+                    
                     VStack {
-                        Spacer()
-                        
                         ZStack(alignment: .topTrailing) {
                             Image(uiImage: uiImage)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(height: 200)
+                                .frame(maxWidth: .infinity)
+                                .frame(maxHeight: 300)
                                 .cornerRadius(8)
                                 .padding()
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color(.systemBackground))
-                                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                                 )
+                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
                                 .padding()
                             
                             Button(action: {
@@ -152,45 +140,83 @@ struct NewNoteView: View {
                             }
                             .padding(24)
                         }
-                        
-                        Spacer()
                     }
-                    .background(Color.black.opacity(0.5))
-                    .edgesIgnoringSafeArea(.all)
                     .transition(.opacity)
                     .zIndex(10)
                 }
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            // Left side - Cancel button
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Cancel") {
-                    isPresented = false
+                
+                // Format options sheet
+                if showFormatOptions {
+                    Color.black.opacity(0.2)
+                        .edgesIgnoringSafeArea(.all)
+                        .onTapGesture {
+                            showFormatOptions = false
+                        }
+                    
+                    VStack {
+                        Spacer()
+                        
+                        VStack(spacing: 16) {
+                            Text("Text Formatting")
+                                .font(.headline)
+                                .padding(.top, 16)
+                            
+                            HStack(spacing: 30) {
+                                FormatOptionButton(formatting: .bold, isActive: activeFormatting.contains(.bold)) {
+                                    applyFormatting(.bold)
+                                }
+                                FormatOptionButton(formatting: .italic, isActive: activeFormatting.contains(.italic)) {
+                                    applyFormatting(.italic)
+                                }
+                                FormatOptionButton(formatting: .underline, isActive: activeFormatting.contains(.underline)) {
+                                    applyFormatting(.underline)
+                                }
+                            }
+                            
+                            HStack(spacing: 30) {
+                                FormatOptionButton(formatting: .heading, isActive: activeFormatting.contains(.heading)) {
+                                    applyFormatting(.heading)
+                                }
+                                FormatOptionButton(formatting: .list, isActive: activeFormatting.contains(.list)) {
+                                    applyFormatting(.list)
+                                }
+                                FormatOptionButton(formatting: .quote, isActive: activeFormatting.contains(.quote)) {
+                                    applyFormatting(.quote)
+                                }
+                            }
+                            
+                            Spacer()
+                                .frame(height: 16)
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemBackground))
+                        )
+                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
+                        .padding()
+                    }
+                    .transition(.move(edge: .bottom))
+                    .zIndex(20)
                 }
-                .foregroundColor(AppTheme.Colors.accent)
             }
-            
-            // Center - Title
-            ToolbarItem(placement: .principal) {
-                Text("New Note")
-                    .font(.headline)
-            }
-            
-            // Right side - Save button
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    saveNote()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
                 }
-                .disabled(title.isEmpty && content.string.isEmpty)
-                .foregroundColor(title.isEmpty && content.string.isEmpty ? AppTheme.Colors.textTertiary : AppTheme.Colors.accent)
-                .fontWeight(.medium)
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        saveNote()
+                    }
+                    .disabled(title.isEmpty)
+                }
             }
-        }
-        .onAppear {
-            // Auto-focus the title field when the view appears
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            .onAppear {
+                // Focus the title field when the view appears
                 focusField = .title
             }
         }
@@ -200,15 +226,15 @@ struct NewNoteView: View {
     
     private func saveNote() {
         // Create attributed content data
-        let attributedContentData = try? content.data(
-            from: NSRange(location: 0, length: content.length),
+        let attributedContentData = try? attributedContent.data(
+            from: NSRange(location: 0, length: attributedContent.length),
             documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
         )
         
         // Add the new note to the store
         noteStore.addNote(
-            title: title,
-            content: content.string,
+            title: title.isEmpty ? "Untitled" : title,
+            content: content,
             folderID: selectedFolderID,
             imageData: imageData,
             attributedContent: attributedContentData,
@@ -217,6 +243,24 @@ struct NewNoteView: View {
         
         // Dismiss the view
         isPresented = false
+    }
+    
+    // Apply formatting to the text
+    private func applyFormatting(_ formatting: TextFormatting) {
+        // Simplified formatting approach for BasicTextEditor
+        // We'll store the formatting in our activeFormatting set
+        if activeFormatting.contains(formatting) {
+            activeFormatting.remove(formatting)
+        } else {
+            activeFormatting.insert(formatting)
+        }
+        
+        // For a real implementation, you would update attributedContent here
+        // Currently, BasicTextEditor doesn't fully support rich text formatting
+        // so this is mostly UI feedback for the formatting buttons
+        
+        // Close the formatting panel after selection
+        showFormatOptions = false
     }
 }
 

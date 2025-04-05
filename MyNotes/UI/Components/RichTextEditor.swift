@@ -52,6 +52,9 @@ struct RichTextEditor: UIViewRepresentable {
             uiView.text = placeholder
             uiView.textColor = .placeholderText
         }
+        
+        // Update formatting UI if needed
+        context.coordinator.updateFormattingControls()
     }
     
     func makeCoordinator() -> Coordinator {
@@ -65,11 +68,6 @@ struct RichTextEditor: UIViewRepresentable {
         
         init(_ parent: RichTextEditor) {
             self.parent = parent
-            super.init()
-        }
-        
-        deinit {
-            NotificationCenter.default.removeObserver(self)
         }
         
         // MARK: - UITextViewDelegate
@@ -78,159 +76,177 @@ struct RichTextEditor: UIViewRepresentable {
             isEditing = true
             
             // Clear placeholder if needed
-            if textView.textColor == .placeholderText {
+            if textView.text == parent.placeholder {
                 textView.text = ""
                 textView.textColor = .label
             }
+            
+            updateFormattingControls()
         }
         
         func textViewDidEndEditing(_ textView: UITextView) {
             isEditing = false
             
-            // If the text is empty, show placeholder
+            // Re-add placeholder if needed
             if textView.text.isEmpty {
                 textView.text = parent.placeholder
                 textView.textColor = .placeholderText
             }
-            
-            // Update the parent's text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
         }
         
         func textViewDidChange(_ textView: UITextView) {
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
+            // Handle placeholder
+            if textView.text.isEmpty {
+                parent.text = NSAttributedString(string: "")
+            } else {
+                parent.text = textView.attributedText
+            }
+            
+            // Call the change handler
+            parent.onTextChange(parent.text)
+            
+            // Update formatting controls
+            updateFormattingControls()
         }
         
-        // Detect selection changes to update active formatting
-        func textViewDidChangeSelection(_ textView: UITextView) {
-            updateActiveFormatting(for: textView)
-        }
-        
-        // Helper function to update active formatting based on current selection
-        private func updateActiveFormatting(for textView: UITextView) {
-            // Clear previous formatting
-            parent.activeFormatting.removeAll()
+        func updateFormattingControls() {
+            guard let textView = textView,
+                  let selectedRange = textView.selectedTextRange,
+                  !selectedRange.isEmpty else {
+                parent.activeFormatting = []
+                return
+            }
             
-            let selectedRange = textView.selectedRange
+            // Here we determine which formatting options are active
+            var activeFormats = Set<TextFormatting>()
             
-            // If there's no selection, we can't determine formatting
-            guard selectedRange.length > 0, let attributedText = textView.attributedText else { return }
+            let range = textView.selectedRange
             
             // Check for bold
-            let fontAttribute = attributedText.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if fontAttribute != nil {
-                let traits = fontAttribute!.fontDescriptor.symbolicTraits
-                if traits.contains(.traitBold) {
-                    parent.activeFormatting.insert(.bold)
-                }
+            if isBoldInRange(range, textView: textView) {
+                activeFormats.insert(.bold)
             }
             
             // Check for italic
-            let fontAttributeItalic = attributedText.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if fontAttributeItalic != nil {
-                let traits = fontAttributeItalic!.fontDescriptor.symbolicTraits
-                if traits.contains(.traitItalic) {
-                    parent.activeFormatting.insert(.italic)
-                }
+            if isItalicInRange(range, textView: textView) {
+                activeFormats.insert(.italic)
             }
             
             // Check for underline
-            let underlineStyle = attributedText.attribute(.underlineStyle, at: selectedRange.location, effectiveRange: nil) as? Int
-            if underlineStyle != nil {
-                if underlineStyle! != 0 {
-                    parent.activeFormatting.insert(.underline)
-                }
+            if isUnderlinedInRange(range, textView: textView) {
+                activeFormats.insert(.underline)
             }
             
-            // Check for text color
-            let textColor = attributedText.attribute(.foregroundColor, at: selectedRange.location, effectiveRange: nil) as? UIColor
-            if textColor != nil {
-                parent.activeFormatting.insert(.textColor(textColor!))
-            }
-            
-            // Check for links
-            let url = attributedText.attribute(.link, at: selectedRange.location, effectiveRange: nil) as? URL
-            let linkText = attributedText.attributedSubstring(from: selectedRange).string as String?
-            if url != nil {
-                parent.activeFormatting.insert(.insertLink(url!, linkText ?? ""))
-            }
-            
-            // Get paragraph style to check alignment and lists
-            let paragraphStyle = attributedText.attribute(.paragraphStyle, at: selectedRange.location, effectiveRange: nil) as? NSParagraphStyle
-            if paragraphStyle != nil {
-                // Check alignment
-                switch paragraphStyle!.alignment {
-                case .left:
-                    parent.activeFormatting.insert(.alignLeft)
-                case .center:
-                    parent.activeFormatting.insert(.alignCenter)
-                case .right:
-                    parent.activeFormatting.insert(.alignRight)
-                default:
-                    break
-                }
-                
-                // Check for lists
-                // This would require custom paragraph style with list attributes
-                // Implementation depends on how bullet/numbered lists are implemented
-            }
+            parent.activeFormatting = activeFormats
         }
+        
+        // MARK: - Formatting Detection
+        
+        func isBoldInRange(_ range: NSRange, textView: UITextView) -> Bool {
+            let attributedText = textView.attributedText
+            var result = true
+            
+            attributedText?.enumerateAttribute(.font, in: range, options: []) { (value, range, stop) in
+                if let font = value as? UIFont {
+                    if !font.fontDescriptor.symbolicTraits.contains(.traitBold) {
+                        result = false
+                        stop.pointee = true
+                    }
+                } else {
+                    result = false
+                    stop.pointee = true
+                }
+            }
+            
+            return result && range.length > 0
+        }
+        
+        func isItalicInRange(_ range: NSRange, textView: UITextView) -> Bool {
+            let attributedText = textView.attributedText
+            var result = true
+            
+            attributedText?.enumerateAttribute(.font, in: range, options: []) { (value, range, stop) in
+                if let font = value as? UIFont {
+                    if !font.fontDescriptor.symbolicTraits.contains(.traitItalic) {
+                        result = false
+                        stop.pointee = true
+                    }
+                } else {
+                    result = false
+                    stop.pointee = true
+                }
+            }
+            
+            return result && range.length > 0
+        }
+        
+        func isUnderlinedInRange(_ range: NSRange, textView: UITextView) -> Bool {
+            let attributedText = textView.attributedText
+            var result = true
+            
+            attributedText?.enumerateAttribute(.underlineStyle, in: range, options: []) { (value, range, stop) in
+                if (value as? NSNumber)?.intValue != NSUnderlineStyle.single.rawValue {
+                    result = false
+                    stop.pointee = true
+                }
+            }
+            
+            return result && range.length > 0
+        }
+        
+        // MARK: - Formatting Actions
         
         @objc func makeBold(_ sender: Any) {
             guard let textView = UIResponder.currentFirst() as? UITextView,
                   textView.selectedRange.length > 0 else { return }
             
             let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            let selectedRange = textView.selectedRange
+            let range = textView.selectedRange
             
-            // Get the font at the selection
-            let currentFont = attrString.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if currentFont != nil {
-                var traits = currentFont!.fontDescriptor.symbolicTraits
-                
-                if traits.contains(.traitBold) {
-                    // Remove bold
-                    traits.remove(.traitBold)
+            attrString.enumerateAttribute(.font, in: range, options: []) { (value, range, stop) in
+                if let oldFont = value as? UIFont {
+                    var newFont: UIFont
+                    
+                    // Toggle bold
+                    if oldFont.fontDescriptor.symbolicTraits.contains(.traitBold) {
+                        // Remove bold
+                        var traits = oldFont.fontDescriptor.symbolicTraits
+                        traits.remove(.traitBold)
+                        if let descriptor = oldFont.fontDescriptor.withSymbolicTraits(traits) {
+                            newFont = UIFont(descriptor: descriptor, size: oldFont.pointSize)
+                        } else {
+                            newFont = UIFont.systemFont(ofSize: oldFont.pointSize)
+                        }
+                    } else {
+                        // Add bold
+                        var traits = oldFont.fontDescriptor.symbolicTraits
+                        traits.insert(.traitBold)
+                        if let descriptor = oldFont.fontDescriptor.withSymbolicTraits(traits) {
+                            newFont = UIFont(descriptor: descriptor, size: oldFont.pointSize)
+                        } else {
+                            newFont = UIFont.boldSystemFont(ofSize: oldFont.pointSize)
+                        }
+                    }
+                    
+                    attrString.removeAttribute(.font, range: range)
+                    attrString.addAttribute(.font, value: newFont, range: range)
                 } else {
-                    // Add bold
-                    traits.insert(.traitBold)
+                    // No font attribute, add a bold one
+                    let newFont = UIFont.boldSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+                    attrString.addAttribute(.font, value: newFont, range: range)
                 }
-                
-                // Create new font with/without bold
-                if let descriptor = currentFont!.fontDescriptor.withSymbolicTraits(traits) {
-                    let newFont = UIFont(descriptor: descriptor, size: currentFont!.pointSize)
-                    attrString.addAttribute(.font, value: newFont, range: selectedRange)
-                }
-            } else {
-                // No font attribute, add default bold font
-                let boldFont = UIFont.boldSystemFont(ofSize: UIFont.systemFontSize)
-                attrString.addAttribute(.font, value: boldFont, range: selectedRange)
             }
             
+            // Update text
             textView.attributedText = attrString
+            textView.selectedRange = range
             
-            // Ensure selection remains
-            textView.selectedRange = selectedRange
+            // Notify SwiftUI
+            parent.text = attrString
+            parent.onTextChange(attrString)
             
-            // Update parent text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
-            
-            // Update active formatting
-            let updatedFont = attrString.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if updatedFont != nil {
-                let updatedTraits = updatedFont!.fontDescriptor.symbolicTraits
-                if updatedTraits.contains(UIFontDescriptor.SymbolicTraits.traitBold) {
-                    parent.activeFormatting.insert(.bold)
-                } else {
-                    parent.activeFormatting.remove(.bold)
-                }
-                
-                // Show feedback
-                showFormatFeedback(message: updatedTraits.contains(UIFontDescriptor.SymbolicTraits.traitBold) ? "Bold" : "Normal")
-            }
+            // Update formatting UI
+            updateFormattingControls()
         }
         
         @objc func makeItalic(_ sender: Any) {
@@ -238,54 +254,52 @@ struct RichTextEditor: UIViewRepresentable {
                   textView.selectedRange.length > 0 else { return }
             
             let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            let selectedRange = textView.selectedRange
+            let range = textView.selectedRange
             
-            // Get the font at the selection
-            let currentFont = attrString.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if currentFont != nil {
-                var traits = currentFont!.fontDescriptor.symbolicTraits
-                
-                if traits.contains(.traitItalic) {
-                    // Remove italic
-                    traits.remove(.traitItalic)
+            attrString.enumerateAttribute(.font, in: range, options: []) { (value, range, stop) in
+                if let oldFont = value as? UIFont {
+                    var newFont: UIFont
+                    
+                    // Toggle italic
+                    if oldFont.fontDescriptor.symbolicTraits.contains(.traitItalic) {
+                        // Remove italic
+                        var traits = oldFont.fontDescriptor.symbolicTraits
+                        traits.remove(.traitItalic)
+                        if let descriptor = oldFont.fontDescriptor.withSymbolicTraits(traits) {
+                            newFont = UIFont(descriptor: descriptor, size: oldFont.pointSize)
+                        } else {
+                            newFont = UIFont.systemFont(ofSize: oldFont.pointSize)
+                        }
+                    } else {
+                        // Add italic
+                        var traits = oldFont.fontDescriptor.symbolicTraits
+                        traits.insert(.traitItalic)
+                        if let descriptor = oldFont.fontDescriptor.withSymbolicTraits(traits) {
+                            newFont = UIFont(descriptor: descriptor, size: oldFont.pointSize)
+                        } else {
+                            newFont = UIFont.italicSystemFont(ofSize: oldFont.pointSize)
+                        }
+                    }
+                    
+                    attrString.removeAttribute(.font, range: range)
+                    attrString.addAttribute(.font, value: newFont, range: range)
                 } else {
-                    // Add italic
-                    traits.insert(.traitItalic)
+                    // No font attribute, add an italic one
+                    let newFont = UIFont.italicSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+                    attrString.addAttribute(.font, value: newFont, range: range)
                 }
-                
-                // Create new font with/without italic
-                if let descriptor = currentFont!.fontDescriptor.withSymbolicTraits(traits) {
-                    let newFont = UIFont(descriptor: descriptor, size: currentFont!.pointSize)
-                    attrString.addAttribute(.font, value: newFont, range: selectedRange)
-                }
-            } else {
-                // No font attribute, add default italic font
-                let italicFont = UIFont.italicSystemFont(ofSize: UIFont.systemFontSize)
-                attrString.addAttribute(.font, value: italicFont, range: selectedRange)
             }
             
+            // Update text
             textView.attributedText = attrString
+            textView.selectedRange = range
             
-            // Ensure selection remains
-            textView.selectedRange = selectedRange
+            // Notify SwiftUI
+            parent.text = attrString
+            parent.onTextChange(attrString)
             
-            // Update parent text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
-            
-            // Update active formatting
-            let updatedFont = attrString.attribute(.font, at: selectedRange.location, effectiveRange: nil) as? UIFont
-            if updatedFont != nil {
-                let updatedTraits = updatedFont!.fontDescriptor.symbolicTraits
-                if updatedTraits.contains(UIFontDescriptor.SymbolicTraits.traitItalic) {
-                    parent.activeFormatting.insert(.italic)
-                } else {
-                    parent.activeFormatting.remove(.italic)
-                }
-                
-                // Show feedback
-                showFormatFeedback(message: updatedTraits.contains(UIFontDescriptor.SymbolicTraits.traitItalic) ? "Italic" : "Normal")
-            }
+            // Update formatting UI
+            updateFormattingControls()
         }
         
         @objc func makeUnderline(_ sender: Any) {
@@ -293,249 +307,58 @@ struct RichTextEditor: UIViewRepresentable {
                   textView.selectedRange.length > 0 else { return }
             
             let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            let selectedRange = textView.selectedRange
+            let range = textView.selectedRange
             
-            // Get underline style at selection
-            let currentStyle = attrString.attribute(.underlineStyle, at: selectedRange.location, effectiveRange: nil) as? Int
-            if currentStyle != nil {
-                let newUnderlineStyle = (currentStyle! == NSUnderlineStyle.single.rawValue) ? 0 : NSUnderlineStyle.single.rawValue
-                
-                attrString.addAttribute(.underlineStyle, value: newUnderlineStyle, range: selectedRange)
-            }
-            
-            textView.attributedText = attrString
-            
-            // Ensure selection remains
-            textView.selectedRange = selectedRange
-            
-            // Update parent text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
-            
-            // Update active formatting
-            let updatedStyle = attrString.attribute(.underlineStyle, at: selectedRange.location, effectiveRange: nil) as? Int
-            if updatedStyle != nil {
-                if updatedStyle! != 0 {
-                    parent.activeFormatting.insert(.underline)
-                } else {
-                    parent.activeFormatting.remove(.underline)
+            // Check if already underlined
+            var isUnderlined = false
+            attrString.enumerateAttribute(.underlineStyle, in: range, options: []) { (value, range, stop) in
+                if (value as? NSNumber)?.intValue == NSUnderlineStyle.single.rawValue {
+                    isUnderlined = true
+                    stop.pointee = true
                 }
-                
-                // Show feedback
-                showFormatFeedback(message: updatedStyle! != 0 ? "Underlined" : "Normal")
-            }
-        }
-        
-        @objc func showColorPicker(_ sender: Any) {
-            guard let textView = UIResponder.currentFirst() as? UITextView,
-                  textView.selectedRange.length > 0,
-                  let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                  let viewController = windowScene.windows.first?.rootViewController else { return }
-            
-            let colorPicker = UIColorPickerViewController()
-            colorPicker.delegate = self
-            colorPicker.selectedColor = .label // Default to system text color
-            
-            // If there's already a color, use that
-            let selectedColor = textView.attributedText.attribute(.foregroundColor, at: textView.selectedRange.location, effectiveRange: nil) as? UIColor
-            if selectedColor != nil {
-                colorPicker.selectedColor = selectedColor!
             }
             
-            viewController.present(colorPicker, animated: true, completion: nil)
+            // Toggle underline
+            if isUnderlined {
+                attrString.removeAttribute(.underlineStyle, range: range)
+            } else {
+                attrString.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+            }
+            
+            // Update text
+            textView.attributedText = attrString
+            textView.selectedRange = range
+            
+            // Notify SwiftUI
+            parent.text = attrString
+            parent.onTextChange(attrString)
+            
+            // Update formatting UI
+            updateFormattingControls()
         }
         
-        // UIColorPickerViewControllerDelegate
-        func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
-            applyTextColor(viewController.selectedColor)
-        }
-        
-        func applyTextColor(_ color: UIColor) {
+        @objc func makeHeading(_ sender: Any) {
             guard let textView = UIResponder.currentFirst() as? UITextView,
                   textView.selectedRange.length > 0 else { return }
             
             let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            let selectedRange = textView.selectedRange
+            let range = textView.selectedRange
             
-            attrString.addAttribute(.foregroundColor, value: color, range: selectedRange)
+            // Use a larger, bold font for headings
+            let headingFont = UIFont.boldSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .title2).pointSize)
+            attrString.removeAttribute(.font, range: range)
+            attrString.addAttribute(.font, value: headingFont, range: range)
             
+            // Update text
             textView.attributedText = attrString
+            textView.selectedRange = range
             
-            // Ensure selection remains
-            textView.selectedRange = selectedRange
+            // Notify SwiftUI
+            parent.text = attrString
+            parent.onTextChange(attrString)
             
-            // Update parent text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
-            
-            // Update active formatting
-            parent.activeFormatting.insert(.textColor(color))
-            
-            // Show feedback
-            showFormatFeedback(message: "Color Applied")
-        }
-        
-        @objc func insertLink(_ sender: Any) {
-            guard let textView = self.textView,
-                  textView.selectedRange.length > 0 else { return }
-            
-            // Create alert controller for link input
-            let alertController = UIAlertController(title: "Add Link", message: nil, preferredStyle: .alert)
-            
-            // Add text fields for URL
-            alertController.addTextField { textField in
-                textField.placeholder = "URL (e.g., https://example.com)"
-                textField.keyboardType = .URL
-                textField.autocapitalizationType = .none
-                
-                // If a link is already applied, show it
-                let existingURL = textView.attributedText.attribute(.link, at: textView.selectedRange.location, effectiveRange: nil) as? URL
-                if existingURL != nil {
-                    textField.text = existingURL!.absoluteString
-                }
-            }
-            
-            // Add actions
-            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-            let addAction = UIAlertAction(title: "Add", style: .default) { [weak self] _ in
-                guard let urlString = alertController.textFields?.first?.text,
-                      let url = URL(string: urlString) else { return }
-                
-                // Get the selected text as the link text
-                let linkText = textView.attributedText.attributedSubstring(from: textView.selectedRange).string
-                
-                // Apply the link
-                self?.applyLink(url, text: linkText)
-            }
-            
-            alertController.addAction(cancelAction)
-            alertController.addAction(addAction)
-            
-            // Present alert
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let viewController = windowScene.windows.first?.rootViewController {
-                viewController.present(alertController, animated: true, completion: nil)
-            }
-        }
-        
-        func applyLink(_ url: URL, text linkText: String?) {
-            guard let textView = UIResponder.currentFirst() as? UITextView,
-                  textView.selectedRange.length > 0 else { return }
-            
-            let attrString = NSMutableAttributedString(attributedString: textView.attributedText)
-            let selectedRange = textView.selectedRange
-            
-            // Add link attribute
-            attrString.addAttribute(.link, value: url, range: selectedRange)
-            
-            // Add blue color to make it look like a link
-            attrString.addAttribute(.foregroundColor, value: UIColor.systemBlue, range: selectedRange)
-            
-            textView.attributedText = attrString
-            
-            // Ensure selection remains
-            textView.selectedRange = selectedRange
-            
-            // Update parent text
-            parent.text = textView.attributedText
-            parent.onTextChange(textView.attributedText)
-            
-            // Update active formatting
-            parent.activeFormatting.insert(.insertLink(url, linkText ?? ""))
-            
-            // Show feedback
-            showFormatFeedback(message: "Link Added")
-        }
-        
-        @objc func doneEditing() {
-            self.textView?.resignFirstResponder()
-        }
-        
-        private func showFormatFeedback(message: String) {
-            guard let textView = self.textView else { return }
-            
-            // Create a toast-like feedback popup
-            let feedbackLabel = UILabel()
-            feedbackLabel.text = message
-            feedbackLabel.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.9)
-            feedbackLabel.textColor = UIColor.label
-            feedbackLabel.textAlignment = .center
-            feedbackLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-            feedbackLabel.layer.cornerRadius = 8
-            feedbackLabel.layer.masksToBounds = true
-            feedbackLabel.alpha = 0
-            feedbackLabel.sizeToFit()
-            
-            // Add padding
-            feedbackLabel.frame.size.width += 32
-            feedbackLabel.frame.size.height += 16
-            
-            // Position at bottom center
-            feedbackLabel.center = CGPoint(
-                x: textView.bounds.midX,
-                y: textView.bounds.maxY - feedbackLabel.bounds.height - 20
-            )
-            
-            // Add shadow for depth
-            feedbackLabel.layer.shadowColor = UIColor.black.cgColor
-            feedbackLabel.layer.shadowOffset = CGSize(width: 0, height: 2)
-            feedbackLabel.layer.shadowOpacity = 0.1
-            feedbackLabel.layer.shadowRadius = 4
-            
-            textView.addSubview(feedbackLabel)
-            
-            // Animate in
-            UIView.animate(withDuration: 0.3) {
-                feedbackLabel.alpha = 1
-            } completion: { _ in
-                // Animate out after delay
-                UIView.animate(withDuration: 0.3, delay: 1.0) {
-                    feedbackLabel.alpha = 0
-                } completion: { _ in
-                    feedbackLabel.removeFromSuperview()
-                }
-            }
-            
-            // Add haptic feedback
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-        }
-        
-        // MARK: - Formatting Handler
-        
-        @objc func handleFormatting(_ notification: Notification) {
-            guard let formatting = notification.object as? TextFormatting else { return }
-            
-            switch formatting {
-            case .bold:
-                makeBold(self)
-            case .italic:
-                makeItalic(self)
-            case .underline:
-                makeUnderline(self)
-            case .alignLeft:
-                // Implement alignment formatting
-                break
-            case .alignCenter:
-                // Implement alignment formatting
-                break
-            case .alignRight:
-                // Implement alignment formatting
-                break
-            case .bulletList:
-                // Implement bullet list formatting
-                break
-            case .numberedList:
-                // Implement numbered list formatting
-                break
-            case .fontSize(_):
-                // Implement font size formatting
-                break
-            case .textColor(let color):
-                applyTextColor(color)
-            case .insertLink(let url, let text):
-                applyLink(url, text: text)
-            }
+            // Update formatting UI
+            updateFormattingControls()
         }
     }
 }
@@ -544,25 +367,15 @@ struct RichTextEditor: UIViewRepresentable {
 
 // Safe extension to get the first responder
 extension UIResponder {
-    private static weak var _currentFirstResponder: UIResponder?
+    static var currentFirstResponder: UIResponder?
     
     static func currentFirst() -> UIResponder? {
-        _currentFirstResponder = nil
+        UIResponder.currentFirstResponder = nil
         UIApplication.shared.sendAction(#selector(UIResponder.findFirstResponder(_:)), to: nil, from: nil, for: nil)
-        return _currentFirstResponder
+        return UIResponder.currentFirstResponder
     }
     
-    @objc private func findFirstResponder(_ sender: Any) {
-        UIResponder._currentFirstResponder = self
-    }
-}
-
-// Extension for getting current orientation
-extension UIApplication {
-    var currentOrientation: UIInterfaceOrientation? {
-        if let windowScene = connectedScenes.first as? UIWindowScene {
-            return windowScene.interfaceOrientation
-        }
-        return nil
+    @objc func findFirstResponder(_ sender: Any) {
+        UIResponder.currentFirstResponder = self
     }
 }

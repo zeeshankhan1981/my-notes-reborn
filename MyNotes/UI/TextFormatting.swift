@@ -1,84 +1,135 @@
 import SwiftUI
 import UIKit
 
-/// Text formatting options for basic editing
-enum TextFormatting: Hashable {
+// Text formatting options
+enum TextFormatting {
     case bold
     case italic
     case underline
-    case alignLeft
-    case alignCenter
-    case alignRight
-    case bulletList
-    case numberedList
-    case fontSize(CGFloat)
-    case textColor(UIColor)
-    case insertLink(URL, String)
+    case heading
+    case list
+    case quote
     
-    // For comparing format states
-    func hash(into hasher: inout Hasher) {
+    var icon: String {
         switch self {
-        case .bold: hasher.combine(0)
-        case .italic: hasher.combine(1)
-        case .underline: hasher.combine(2)
-        case .alignLeft: hasher.combine(3)
-        case .alignCenter: hasher.combine(4)
-        case .alignRight: hasher.combine(5)
-        case .bulletList: hasher.combine(6)
-        case .numberedList: hasher.combine(7)
-        case .fontSize(let size): 
-            hasher.combine(8)
-            hasher.combine(size)
-        case .textColor(let color): 
-            hasher.combine(9)
-            hasher.combine(color.hashValue)
-        case .insertLink(let url, let text):
-            hasher.combine(10)
-            hasher.combine(url.hashValue)
-            hasher.combine(text)
+        case .bold:
+            return "bold"
+        case .italic:
+            return "italic"
+        case .underline:
+            return "underline"
+        case .heading:
+            return "textformat.size" // Using a valid SF Symbol that exists
+        case .list:
+            return "list.bullet"
+        case .quote:
+            return "text.quote"
         }
     }
     
-    static func == (lhs: TextFormatting, rhs: TextFormatting) -> Bool {
-        switch (lhs, rhs) {
-        case (.bold, .bold), (.italic, .italic), (.underline, .underline),
-             (.alignLeft, .alignLeft), (.alignCenter, .alignCenter), (.alignRight, .alignRight),
-             (.bulletList, .bulletList), (.numberedList, .numberedList):
-            return true
-        case (.fontSize(let size1), .fontSize(let size2)):
-            return size1 == size2
-        case (.textColor(let color1), .textColor(let color2)):
-            return color1 == color2
-        case (.insertLink(let url1, let text1), .insertLink(let url2, let text2)):
-            return url1 == url2 && text1 == text2
-        default:
-            return false
+    var title: String {
+        switch self {
+        case .bold:
+            return "Bold"
+        case .italic:
+            return "Italic"
+        case .underline:
+            return "Underline"
+        case .heading:
+            return "Heading"
+        case .list:
+            return "List"
+        case .quote:
+            return "Quote"
         }
     }
 }
 
-/// Format button with improved visual feedback
-struct FormatButton: View {
-    let icon: String
+// Format option button for text formatting
+struct FormatOptionButton: View {
+    let formatting: TextFormatting
+    var isActive: Bool = false
     let action: () -> Void
-    let isActive: Bool
     
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                action()
+        Button(action: action) {
+            VStack {
+                Image(systemName: formatting.icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(isActive ? .white : .primary)
+                    .padding(10)
+                    .background(
+                        Circle()
+                            .fill(isActive ? Color.accentColor : Color(.systemGray5))
+                    )
+                
+                Text(formatting.title)
+                    .font(.caption)
+                    .foregroundColor(isActive ? .accentColor : .primary)
             }
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(isActive ? AppTheme.Colors.accent : AppTheme.Colors.textSecondary)
-                .padding(8)
-                .background(
-                    Circle()
-                        .fill(isActive ? AppTheme.Colors.accent.opacity(0.1) : Color.clear)
-                )
-                .contentShape(Circle())
         }
-        .buttonStyle(PressableButtonStyle())
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// Helper extension to apply formatting to attributed strings
+extension NSMutableAttributedString {
+    func applyFormatting(_ formatting: TextFormatting, range: NSRange) {
+        switch formatting {
+        case .bold:
+            let fontAttributes = self.attributes(at: range.location, effectiveRange: nil)
+            if let font = fontAttributes[.font] as? UIFont {
+                let traits = font.fontDescriptor.symbolicTraits
+                let descriptor = font.fontDescriptor.withSymbolicTraits(traits.union(.traitBold))
+                if let descriptor = descriptor {
+                    let newFont = UIFont(descriptor: descriptor, size: font.pointSize)
+                    self.addAttribute(.font, value: newFont, range: range)
+                }
+            }
+        case .italic:
+            let fontAttributes = self.attributes(at: range.location, effectiveRange: nil)
+            if let font = fontAttributes[.font] as? UIFont {
+                let traits = font.fontDescriptor.symbolicTraits
+                let descriptor = font.fontDescriptor.withSymbolicTraits(traits.union(.traitItalic))
+                if let descriptor = descriptor {
+                    let newFont = UIFont(descriptor: descriptor, size: font.pointSize)
+                    self.addAttribute(.font, value: newFont, range: range)
+                }
+            }
+        case .underline:
+            self.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+        case .heading:
+            let headingFont = UIFont.systemFont(ofSize: 20, weight: .bold)
+            self.addAttribute(.font, value: headingFont, range: range)
+        case .list:
+            // Simple implementation - prepend bullet point
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.headIndent = 15.0
+            paragraphStyle.firstLineHeadIndent = 0.0
+            self.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
+            
+            // Insert bullet point at the beginning of each paragraph
+            let string = self.string as NSString
+            let paragraphRange = string.paragraphRange(for: range)
+            let bulletPoint = "• "
+            
+            if !string.substring(with: NSRange(location: paragraphRange.location, length: min(2, paragraphRange.length))).hasPrefix(bulletPoint) {
+                self.insert(NSAttributedString(string: bulletPoint), at: paragraphRange.location)
+            }
+        case .quote:
+            // Simple implementation - add quote formatting
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.headIndent = 20.0
+            paragraphStyle.firstLineHeadIndent = 20.0
+            self.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
+            self.addAttribute(.foregroundColor, value: UIColor.darkGray, range: range)
+            
+            // Add a vertical bar for quotes
+            let quoteBarAttachment = NSTextAttachment()
+            let quoteBarImage = UIImage(systemName: "quote.opening")?.withTintColor(.gray)
+            quoteBarAttachment.image = quoteBarImage
+            let quoteBarString = NSAttributedString(attachment: quoteBarAttachment)
+            self.insert(quoteBarString, at: range.location)
+        }
     }
 }

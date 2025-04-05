@@ -57,8 +57,13 @@ struct BasicTextEditor: View {
                     }
                 }
                 .onAppear {
-                    // Remove default padding
+                    // Fix layout constraint issues by using more appropriate insets
                     UITextView.appearance().textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+                    
+                    // Apply these modifications to help with the system input assistant view constraint conflicts
+                    if let textField = UITextField.appearance(whenContainedInInstancesOf: [UIView.self]) as? UITextField {
+                        textField.inputAccessoryView = nil
+                    }
                 }
                 .onDisappear {
                     // Reset to default
