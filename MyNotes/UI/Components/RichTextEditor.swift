@@ -13,8 +13,7 @@ struct RichTextEditor: UIViewRepresentable {
         textView.font = UIFont.preferredFont(forTextStyle: .body)
         textView.isScrollEnabled = true
         textView.isEditable = true
-        textView.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.6)
-        textView.layer.cornerRadius = 8
+        textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(top: 12, left: 8, bottom: 12, right: 8)
         textView.autocapitalizationType = .sentences
         textView.autocorrectionType = .yes
@@ -34,31 +33,11 @@ struct RichTextEditor: UIViewRepresentable {
             textView.textColor = .placeholderText
         }
         
-        // Setup touch bar without showing it
-        setupToolbar(textView, context: context)
-        
         return textView
     }
     
     private func setupToolbar(_ textView: UITextView, context: Context) {
-        // Create toolbar items but don't attach them to the textView
-        // This keeps the functionality available for the floating toolbar
-        
-        // We're not setting textView.inputAccessoryView = toolbar anymore
-        // because we're using our own floating formatting toolbar in the SwiftUI layer
-        
-        // Register for formatting notifications
-        NotificationCenter.default.addObserver(
-            context.coordinator,
-            selector: #selector(Coordinator.handleFormatting(_:)),
-            name: Notification.Name("ApplyRichTextFormatting"),
-            object: nil
-        )
-    }
-    
-    private func createToolbarButton(icon: String, selector: Selector, coordinator: Coordinator) -> UIBarButtonItem {
-        let button = UIBarButtonItem(image: UIImage(systemName: icon), style: .plain, target: coordinator, action: selector)
-        return button
+        // We're not setting up any toolbar - keeping it minimal like Bear Notes
     }
     
     func updateUIView(_ uiView: UITextView, context: Context) {
@@ -87,14 +66,6 @@ struct RichTextEditor: UIViewRepresentable {
         init(_ parent: RichTextEditor) {
             self.parent = parent
             super.init()
-            
-            // Listen for formatting notifications from SwiftUI
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(handleFormatting(_:)),
-                name: Notification.Name("ApplyRichTextFormatting"),
-                object: nil
-            )
         }
         
         deinit {
