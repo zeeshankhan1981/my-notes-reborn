@@ -118,7 +118,7 @@ struct MainView: View {
         }
         .sheet(isPresented: $showingNewNote) {
             NavigationStack {
-                NoteEditorView(mode: .new, existingNote: nil)
+                NoteEditorView(mode: .new, existingNote: nil, presentationMode: .embedded)
                     .navigationTitle("New Note")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -130,8 +130,20 @@ struct MainView: View {
                         
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Save") {
-                                // Save functionality is handled within NoteEditorView
-                                showingNewNote = false
+                                // Post notification to save the note
+                                NotificationCenter.default.post(
+                                    name: Notification.Name("SaveNoteFromParent"),
+                                    object: nil
+                                )
+                                
+                                // Use a separate action to dismiss the sheet after a delay
+                                // This prevents modifying state during view update
+                                let dismissAction = {
+                                    self.showingNewNote = false
+                                }
+                                
+                                // Schedule the dismiss action to run after saving is complete
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: dismissAction)
                             }
                         }
                     }

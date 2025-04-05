@@ -313,13 +313,32 @@ struct NoteListView: View {
     
     private var newNoteSheet: some View {
         NavigationView {
-            NoteEditorView(mode: .new, existingNote: nil)
+            NoteEditorView(mode: .new, existingNote: nil, presentationMode: .embedded)
                 .navigationTitle("New Note")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") {
                             showingAdd = false
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            // Post notification to save the note
+                            NotificationCenter.default.post(
+                                name: Notification.Name("SaveNoteFromParent"),
+                                object: nil
+                            )
+                            
+                            // Use a separate action to dismiss the sheet after a delay
+                            // This prevents modifying state during view update
+                            let dismissAction = {
+                                self.showingAdd = false
+                            }
+                            
+                            // Schedule the dismiss action to run after saving is complete
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: dismissAction)
                         }
                     }
                 }

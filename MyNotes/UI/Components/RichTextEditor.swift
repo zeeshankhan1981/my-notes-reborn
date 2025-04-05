@@ -41,63 +41,19 @@ struct RichTextEditor: UIViewRepresentable {
     }
     
     private func setupToolbar(_ textView: UITextView, context: Context) {
-        let toolbar = UIToolbar()
-        toolbar.tintColor = UIColor(named: "AppPrimaryColor") ?? .systemBlue
-        toolbar.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.95)
-        toolbar.isTranslucent = true
-        toolbar.sizeToFit()
+        // Create toolbar items but don't attach them to the textView
+        // This keeps the functionality available for the floating toolbar
         
-        // Add a subtle border to the toolbar
-        toolbar.layer.borderColor = UIColor.separator.cgColor
-        toolbar.layer.borderWidth = 0.5
+        // We're not setting textView.inputAccessoryView = toolbar anymore
+        // because we're using our own floating formatting toolbar in the SwiftUI layer
         
-        // Create formatting buttons with icons
-        let boldButton = createToolbarButton(
-            icon: "bold",
-            selector: #selector(Coordinator.makeBold(_:)),
-            coordinator: context.coordinator
+        // Register for formatting notifications
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.handleFormatting(_:)),
+            name: Notification.Name("ApplyRichTextFormatting"),
+            object: nil
         )
-        
-        let italicButton = createToolbarButton(
-            icon: "italic",
-            selector: #selector(Coordinator.makeItalic(_:)),
-            coordinator: context.coordinator
-        )
-        
-        let underlineButton = createToolbarButton(
-            icon: "underline",
-            selector: #selector(Coordinator.makeUnderline(_:)),
-            coordinator: context.coordinator
-        )
-        
-        let colorButton = createToolbarButton(
-            icon: "paintbrush",
-            selector: #selector(Coordinator.showColorPicker(_:)),
-            coordinator: context.coordinator
-        )
-        
-        let linkButton = createToolbarButton(
-            icon: "link",
-            selector: #selector(Coordinator.insertLink(_:)),
-            coordinator: context.coordinator
-        )
-        
-        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: context.coordinator, action: #selector(Coordinator.doneEditing))
-        doneButton.tintColor = UIColor(named: "AppPrimaryColor") ?? .systemBlue
-        
-        // Add separator between button groups
-        let separator = UIBarButtonItem(image: UIImage(systemName: "circle.fill")?.withRenderingMode(.alwaysTemplate), style: .plain, target: nil, action: nil)
-        separator.tintColor = UIColor.systemGray4
-        separator.imageInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-        
-        // Set toolbar items
-        toolbar.items = [boldButton, italicButton, underlineButton, flexSpace, colorButton, linkButton, flexSpace, doneButton]
-        
-        // Add the toolbar as accessory view
-        // We don't actually show this toolbar as we're adding our own SwiftUI based controls
-        // but we keep this for compatibility with existing code
-        textView.inputAccessoryView = toolbar
     }
     
     private func createToolbarButton(icon: String, selector: Selector, coordinator: Coordinator) -> UIBarButtonItem {
